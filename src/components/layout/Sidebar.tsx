@@ -41,7 +41,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-export function Sidebar({ userRole = 'OWNER' }: { userRole?: string }) {
+export function Sidebar({ userRole = 'OWNER', open = false, onClose = () => {} }: { userRole?: string; open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
 
   const sections: NavSection[] = [
@@ -94,7 +94,9 @@ export function Sidebar({ userRole = 'OWNER' }: { userRole?: string }) {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 min-h-screen border-r border-slate-800 select-none">
+    <>
+    {open && <div className="fixed inset-0 z-40 bg-slate-900/60 lg:hidden" onClick={onClose} aria-hidden="true" />}
+    <aside className={cn('w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 h-full border-r border-slate-800 select-none fixed inset-y-0 left-0 z-50 transition-transform duration-200 lg:static lg:translate-x-0', open ? 'translate-x-0' : '-translate-x-full')}>
       {/* Brand Header */}
       <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-800 bg-slate-950/40">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-900/40">
@@ -168,5 +170,6 @@ export function Sidebar({ userRole = 'OWNER' }: { userRole?: string }) {
         </div>
       </div>
     </aside>
+    </>
   );
 }
