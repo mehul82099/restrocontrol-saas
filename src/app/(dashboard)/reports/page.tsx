@@ -116,7 +116,7 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Date Filter Buttons */}
           <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-semibold">
             {[
@@ -128,7 +128,7 @@ export default function ReportsPage() {
               <button
                 key={f.id}
                 onClick={() => setDateFilter(f.id)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
                   dateFilter === f.id ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -139,7 +139,7 @@ export default function ReportsPage() {
 
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all"
           >
             <Download className="w-4 h-4" />
             Export CSV

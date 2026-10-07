@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   X,
+  Menu,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -20,9 +21,10 @@ interface HeaderProps {
   user: any;
   activeOutletId: string;
   onOutletChange: (outletId: string) => void;
+  onMenuClick?: () => void;
 }
 
-export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
+export function Header({ user, activeOutletId, onOutletChange, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -74,17 +76,24 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
   const currentOutlet = user?.outlets?.find((o: any) => o.id === activeOutletId) || user?.outlets?.[0];
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-30 flex-shrink-0">
+    <header className="h-16 bg-white border-b border-slate-200 px-3 sm:px-6 gap-2 flex items-center justify-between z-30 flex-shrink-0">
       {/* Left: Outlet Switcher */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <button
+          onClick={onMenuClick}
+          aria-label="Open menu"
+          className="lg:hidden w-10 h-10 flex-shrink-0 rounded-xl border border-slate-200 flex items-center justify-center text-slate-700 hover:bg-slate-50"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2 min-w-0 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shadow-sm">
           <Building2 className="w-4 h-4 text-emerald-600" />
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-slate-400 leading-none">Active Outlet</span>
             <select
               value={activeOutletId}
               onChange={(e) => onOutletChange(e.target.value)}
-              className="bg-transparent text-xs font-semibold text-slate-800 outline-none cursor-pointer pr-4"
+              className="bg-transparent text-xs font-semibold text-slate-800 outline-none cursor-pointer pr-4 max-w-[110px] sm:max-w-none truncate"
             >
               {user?.outlets?.map((outlet: any) => (
                 <option key={outlet.id} value={outlet.id}>
@@ -101,9 +110,9 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
       </div>
 
       {/* Right: Notifications & User Profile */}
-      <div className="flex items-center gap-3 relative">
+      <div className="flex items-center gap-2 sm:gap-3 relative flex-shrink-0">
         {/* Notification Bell */}
-        <div className="relative">
+        <div className="sm:relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors relative"
@@ -118,7 +127,7 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
 
           {/* Notifications Popover */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="fixed sm:absolute left-3 right-3 top-[68px] sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-slate-800 text-sm">Notifications</h4>
@@ -176,7 +185,7 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
         </div>
 
         {/* User Card & Logout */}
-        <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-200">
           <div className="w-9 h-9 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-xs shadow-sm">
             {user?.name?.slice(0, 2).toUpperCase() || 'RC'}
           </div>
