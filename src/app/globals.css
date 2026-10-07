@@ -50,3 +50,6 @@ body {
     font-size: 12px;
   }
 }
+
+html, body { overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+button, select, input { touch-action: manipulation; }
