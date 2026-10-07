@@ -1,16 +1,17 @@
+import { protectRead } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'view:inventory');
   if (errorResponse || !auth) return errorResponse;
 
   const url = new URL(req.url);
   const ingredientId = url.searchParams.get('ingredientId');
   const movementType = url.searchParams.get('movementType');
-  const limit = parseInt(url.searchParams.get('limit') || '50');
-  const offset = parseInt(url.searchParams.get('offset') || '0');
+  const limit = Math.max(1, Math.min(200, parseInt(url.searchParams.get('limit') || '50') || 50));
+  const offset = Math.max(0, Math.min(100000, parseInt(url.searchParams.get('offset') || '0') || 0));
 
   const where: any = {
     restaurantId: auth.restaurantId,
@@ -34,3 +35,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ success: true, total, movements });
 }
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

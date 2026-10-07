@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import { useOutlet } from '../layout';
@@ -46,7 +47,7 @@ export default function InventoryPage() {
     if (!activeOutletId) return;
     setLoadingStock(true);
     try {
-      const res = await fetch(`/api/inventory?outletId=${activeOutletId}`);
+      const res = await apiFetch(activeOutletId, `/api/inventory?outletId=${activeOutletId}`);
       const data = await res.json();
       if (data.success) {
         setStockList(data.stock || []);
@@ -63,7 +64,7 @@ export default function InventoryPage() {
     setLoadingLedger(true);
     try {
       const typeParam = selectedMovementType !== 'ALL' ? `&movementType=${selectedMovementType}` : '';
-      const res = await fetch(`/api/inventory/ledger?outletId=${activeOutletId}${typeParam}&limit=100`);
+      const res = await apiFetch(activeOutletId, `/api/inventory/ledger?outletId=${activeOutletId}${typeParam}&limit=100`);
       const data = await res.json();
       if (data.success) {
         setMovements(data.movements || []);
@@ -91,9 +92,9 @@ export default function InventoryPage() {
     setIsSubmittingAdjust(true);
 
     try {
-      const res = await fetch('/api/inventory', {
+      const res = await apiFetch(activeOutletId, '/api/inventory', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-outlet-id': activeOutletId },
         body: JSON.stringify({
           ingredientId: adjustIngredient.ingredientId,
           movementType: adjustType,

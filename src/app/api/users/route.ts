@@ -1,3 +1,5 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
@@ -5,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { AuditService } from '@/server/services/audit.service';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
 
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, users });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
 
@@ -36,7 +38,10 @@ export async function POST(req: NextRequest) {
   }
 
   const data = await req.json();
-  const passwordHash = await bcrypt.hash(data.password || 'Welcome123!', 10);
+  if (typeof data.password !== 'string' || data.password.length < 12 || data.password.length > 72) return NextResponse.json({success: false, error: 'Use a password of 12 to 72 characters.'}, {status: 400});
+  if (!['OWNER','MANAGER','CASHIER','KITCHEN_STAFF','INVENTORY_MANAGER'].includes(data.role) || (auth.user.role !== 'OWNER' && !['CASHIER','KITCHEN_STAFF','INVENTORY_MANAGER'].includes(data.role))) return NextResponse.json({success: false, error: 'Role assignment denied.'}, {status: 403});
+  if (typeof data.email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) return NextResponse.json({success: false, error: 'Invalid email.'}, {status: 400});
+  const passwordHash = await bcrypt.hash(data.password, 12);
 
   const user = await prisma.user.create({
     data: {
@@ -82,3 +87,9 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

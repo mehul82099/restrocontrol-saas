@@ -263,7 +263,7 @@ export default function UsersPage() {
       </div>
 
       {/* Role Matrix Modal */}
-      <Modal isOpen={showRoleInfo} onClose={() => setShowRoleInfo(false)} title="Role-Based Permissions Matrix" size="lg">
+      <Modal isOpen={showRoleInfo} onClose={() => setShowRoleInfo(false)} title="Role-Based Permissions Matrix" maxWidth="lg">
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           {Object.entries(ROLE_PERMISSIONS).map(([roleKey, info]) => (
             <div key={roleKey} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import { useOutlet } from '../layout';
@@ -27,7 +28,7 @@ export default function VariancePage() {
     if (!activeOutletId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics/variance?outletId=${activeOutletId}&filter=${filter}`);
+      const res = await apiFetch(activeOutletId, `/api/analytics/variance?outletId=${activeOutletId}&filter=${filter}`);
       const data = await res.json();
       if (data.success) {
         setVarianceData(data);

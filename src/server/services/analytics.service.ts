@@ -16,6 +16,10 @@ export class AnalyticsService {
     customStart?: string,
     customEnd?: string
   ): DateRangeFilter {
+    if (filter === 'custom') {
+      const start = new Date(customStart || ''); const end = new Date(customEnd || '');
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end < start || end.getTime() - start.getTime() > 366 * 86400000) throw new Error('Invalid date range');
+    }
     const now = new Date();
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 

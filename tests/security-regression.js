@@ -1,0 +1,71 @@
+if (!/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '')) throw new Error('Tests require an isolated local database; refusing remote database');
+const assert = require('node:assert/strict');
+const jiti = require('jiti')(__filename, {alias: {'@': require('path').resolve(__dirname, '../src')}});
+const {prisma} = jiti('../src/server/db/prisma');
+const {cache} = jiti('../src/server/cache/redis');
+const {signToken, verifyToken} = jiti('../src/server/auth/jwt');
+const {authenticateRequest} = jiti('../src/server/auth/middleware');
+const {OrderService} = jiti('../src/server/services/order.service');
+const {InventoryService} = jiti('../src/server/services/inventory.service');
+const {PurchaseService} = jiti('../src/server/services/purchase.service');
+const {StockCountService} = jiti('../src/server/services/stock-count.service');
+const {WastageService} = jiti('../src/server/services/wastage.service');
+const {RecipeEngineService} = jiti('../src/server/services/recipe-engine.service');
+const {UnitConverter} = jiti('../src/server/services/unit-converter');
+const {ReportService} = jiti('../src/server/services/report.service');
+const {NextRequest} = require('next/server');
+const {POST: createUser} = jiti('../src/app/api/users/route');
+const {POST: stockCount} = jiti('../src/app/api/stock-count/route');
+let tests = 0;
+async function test(name, fn) {await fn(); tests++; console.log(`PASS ${name}`);}
+async function main() {
+ const restaurant = await prisma.restaurant.findUnique({where:{slug:'demo-kitchen'}});
+ const outlet = await prisma.outlet.findFirst({where:{restaurantId:restaurant.id,isDefault:true}});
+ const owner = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'OWNER'}});
+ const manager = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'MANAGER'}});
+ const im = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'INVENTORY_MANAGER'}});
+ const dish = await prisma.menuItem.findFirst({where:{restaurantId:restaurant.id}});
+ const ingredient = await prisma.ingredient.findFirst({where:{restaurantId:restaurant.id,unit:'KG'}});
+ const foreign = await prisma.restaurant.upsert({where:{slug:'security-test-tenant'},create:{slug:'security-test-tenant',name:'Isolated security test'},update:{}});
+ const foreignOutlet = await prisma.outlet.upsert({where:{restaurantId_code:{restaurantId:foreign.id,code:'TEST'}},create:{restaurantId:foreign.id,code:'TEST',name:'Test'},update:{}});
+ const payload = user => ({userId:user.id,restaurantId:restaurant.id,role:user.role,email:user.email,name:user.name,outletId:outlet.id});
+ const request = (user, url='http://localhost:3000/api/auth/me', body, headers={}) => new NextRequest(url,{method:body?'POST':'GET',headers:{authorization:`Bearer ${signToken(payload(user))}`,'content-type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
+ const total = Math.round(dish.basePrice*(1+dish.taxRate/100)*100)/100;
+ const orderInput = () => ({restaurantId:restaurant.id,outletId:outlet.id,orderType:'TAKEAWAY',items:[{menuItemId:dish.id,quantity:1,name:'untrusted',unitPrice:0,totalPrice:0}],subtotal:0,totalAmount:total,payments:[{amount:total,paymentMethod:'CARD'}]});
+ await test('JWT fails closed with no key',async()=>{const key=process.env.JWT_SECRET;delete process.env.JWT_SECRET;assert.throws(()=>signToken(payload(owner)));process.env.JWT_SECRET=key;});
+ await test('Old hard-coded key cannot forge token',async()=>{const jwt=require('jsonwebtoken');assert.equal(verifyToken(jwt.sign(payload(owner),'restrocontrol-production-jwt-key-32chars-min-secure-hash')),null);});
+ await test('Fresh authority rejects disabled user',async()=>{await prisma.user.update({where:{id:manager.id},data:{isActive:false}});assert.equal((await authenticateRequest(request(manager))).errorResponse.status,401);await prisma.user.update({where:{id:manager.id},data:{isActive:true}});});
+ await test('JWT claimed OWNER cannot override DB role',async()=>{const token=signToken({...payload(im),role:'OWNER'});const req=new NextRequest('http://localhost:3000/api/users',{headers:{authorization:`Bearer ${token}`}});assert.equal((await authenticateRequest(req,'manage:users')).errorResponse.status,403);});
+ await test('Foreign outlet denied',async()=>{assert.equal((await authenticateRequest(request(owner,`http://localhost:3000/api/auth/me?outletId=${foreignOutlet.id}`))).errorResponse.status,403);});
+ await test('Cross-origin cookie mutation denied',async()=>{const req=new NextRequest('http://localhost:3000/api/users',{method:'POST',headers:{cookie:`token=${signToken(payload(owner))}`,origin:'https://attacker.invalid'},body:'{}'});assert.equal((await authenticateRequest(req)).errorResponse.status,403);});
+ await test('Manager cannot create OWNER',async()=>{const response=await createUser(request(manager,'http://localhost:3000/api/users',{name:'Not created',email:`security-${Date.now()}@invalid.test`,role:'OWNER',password:'a-long-test-password'}));assert.equal(response.status,403);});
+ await test('Default staff password removed',async()=>{const response=await createUser(request(owner,'http://localhost:3000/api/users',{name:'Not created',email:`security-${Date.now()}@invalid.test`,role:'CASHIER'}));assert.equal(response.status,400);});
+ await test('Negative quantity denied',async()=>{const i=orderInput();i.items[0].quantity=-1;await assert.rejects(()=>OrderService.createOrder(i));});
+ await test('Fake checkout total denied',async()=>{const i=orderInput();i.totalAmount=0;await assert.rejects(()=>OrderService.createOrder(i));});
+ let order;
+ await test('Catalog replaces caller prices and names',async()=>{const result=await OrderService.createOrder(orderInput());order=result.order;assert.equal(result.items[0].unitPrice,dish.basePrice);assert.equal(result.items[0].name,dish.name);assert.equal(order.totalAmount,total);});
+ await test('Cross-tenant idempotency cannot return data',async()=>{const key=`SEC-${Date.now()}`;const a=orderInput();a.idempotencyKey=key;await OrderService.createOrder(a);await assert.rejects(()=>OrderService.createOrder({...a,restaurantId:foreign.id,outletId:foreignOutlet.id}));});
+ await test('Foreign ingredient cannot corrupt stock',async()=>{await assert.rejects(()=>InventoryService.recordMovement({restaurantId:foreign.id,outletId:foreignOutlet.id,ingredientId:ingredient.id,quantity:1,movementType:'ADJUSTMENT'}));});
+ await test('Inventory grams normalize to KG',async()=>{const before=await prisma.outletInventory.findUnique({where:{outletId_ingredientId:{outletId:outlet.id,ingredientId:ingredient.id}}});const r=await InventoryService.recordMovement({restaurantId:restaurant.id,outletId:outlet.id,ingredientId:ingredient.id,quantity:1000,unit:'G',movementType:'ADJUSTMENT'});assert.equal(r.movement.quantity,1);assert.ok(Math.abs(r.outletInventory.currentStock-before.currentStock-1)<1e-6);});
+ await test('Incompatible units rejected',async()=>{assert.throws(()=>UnitConverter.convert(1,'KG','L'));assert.throws(()=>UnitConverter.convert(1,'BUCKET','KG'));});
+ await test('Negative wastage cannot add stock',async()=>{await assert.rejects(()=>WastageService.recordWastage({restaurantId:restaurant.id,outletId:outlet.id,ingredientId:ingredient.id,quantity:-1,reason:'SPOILED'}));});
+ await test('Negative stock count denied',async()=>{await assert.rejects(()=>StockCountService.submitStockCount({restaurantId:restaurant.id,outletId:outlet.id,items:[{ingredientId:ingredient.id,physicalStock:-1}]}));});
+ await test('Stock count approval cannot be bypassed',async()=>{const response=await stockCount(request(im,'http://localhost:3000/api/stock-count',{autoApprove:true,items:[{ingredientId:ingredient.id,physicalStock:1}]}));const result=await response.json();assert.equal(result.stockCount.status,'PENDING_APPROVAL');});
+ await test('Negative refund denied',async()=>{await assert.rejects(()=>OrderService.refundOrder(restaurant.id,order.id,-1,owner.id));});
+ await test('Excess refund denied',async()=>{await assert.rejects(()=>OrderService.refundOrder(restaurant.id,order.id,total+1,owner.id));});
+ await test('Partial refund preserves active order status',async()=>{const r=await OrderService.refundOrder(restaurant.id,order.id,total/2,owner.id);assert.equal(r.status,'CONFIRMED');});
+ await test('Remaining refund marks fully refunded',async()=>{const r=await OrderService.refundOrder(restaurant.id,order.id,total/2,owner.id);assert.equal(r.status,'REFUNDED');});
+ await test('Repeated refund denied',async()=>{await assert.rejects(()=>OrderService.refundOrder(restaurant.id,order.id,1,owner.id));});
+ await test('CSV formulas escaped',async()=>{assert.ok(ReportService.convertToCSV(['name'],[{name:'=HYPERLINK("https://invalid.test")'}]).includes("'=HYPERLINK"));});
+ await test('All 20 advertised report types return typed rows', async()=>{
+   for(const type of ['sales','item_sales','category_sales','payment','discount','cancellation','current_stock','stock_movement','consumption','wastage','stock_adjustments','low_stock','physical_stock','purchases','supplier','purchase_price_history','recipe_costing','food_cost','item_margin','inventory_variance']) {
+    const r=await ReportService.generateReport(type,restaurant.id,outlet.id,'today'); assert.ok(Array.isArray(r.headers)); assert.ok(Array.isArray(r.rows));
+   }
+ });
+ await test('Cross-tenant customer reference denied',async()=>{const c=await prisma.customer.create({data:{restaurantId:foreign.id,name:'Foreign test',phone:`SEC-${Date.now()}`}});await assert.rejects(()=>OrderService.createOrder({...orderInput(),customerId:c.id}));});
+ await test('Foreign supplier cannot be linked to PO',async()=>{const supplier=await prisma.supplier.create({data:{restaurantId:foreign.id,name:`Foreign test-${Date.now()}`}});await assert.rejects(()=>PurchaseService.createPO({restaurantId:restaurant.id,outletId:outlet.id,supplierId:supplier.id,items:[{ingredientId:ingredient.id,quantity:1,unit:'KG',unitPrice:1}]}));});
+ await test('Duplicate stock count ingredient denied',async()=>{await assert.rejects(()=>StockCountService.submitStockCount({restaurantId:restaurant.id,outletId:outlet.id,items:[{ingredientId:ingredient.id,physicalStock:1},{ingredientId:ingredient.id,physicalStock:2}]}));});
+ await test('Internal unprivileged autoapproval denied',async()=>{await assert.rejects(()=>StockCountService.submitStockCount({restaurantId:restaurant.id,outletId:outlet.id,conductedByUserId:im.id,autoApprove:true,items:[{ingredientId:ingredient.id,physicalStock:1}]}));});
+ console.log(`${tests} SECURITY REGRESSIONS PASSED`);
+}
+main().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{await prisma.$disconnect();await cache.disconnect();});

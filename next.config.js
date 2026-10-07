@@ -1,9 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
+  poweredByHeader: false,
+  async headers() {
+    return [{source: '/:path*', headers: [
+      {key: 'X-Content-Type-Options', value: 'nosniff'},
+      {key: 'X-Frame-Options', value: 'DENY'},
+      {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
+      {key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()'},
+      {key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"},
+    ]}, {source: '/api/:path*', headers: [{key: 'Cache-Control', value: 'private, no-store'}]}];
+  },
   typescript: {
-    // We run typechecking in test suite, keep builds responsive
-    ignoreBuildErrors: true,
+    // Type errors must block production builds
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

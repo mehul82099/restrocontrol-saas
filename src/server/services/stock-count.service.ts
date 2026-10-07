@@ -1,4 +1,6 @@
+import { finiteNumber, assertTenantReference, serializable } from './validation';
 import { prisma } from '../db/prisma';
+import { randomUUID } from 'crypto';
 import { ApprovalStatus, MovementType } from '@prisma/client';
 import { InventoryService } from './inventory.service';
 import { AuditService } from './audit.service';
@@ -27,6 +29,13 @@ export class StockCountService {
   static async submitStockCount(input: CreateStockCountInput) {
     const { restaurantId, outletId, conductedByUserId, items, notes, autoApprove } = input;
 
+    await assertTenantReference('outlet', outletId, restaurantId);
+    if (!Array.isArray(items) || !items.length || new Set(items.map(i => i.ingredientId)).size !== items.length) throw new Error('Invalid stock count items');
+    for (const item of items) {finiteNumber(item.physicalStock, 'physical stock'); await assertTenantReference('ingredient', item.ingredientId, restaurantId);}
+    if (autoApprove) {
+      const approver = await prisma.user.findFirst({where: {id: conductedByUserId || '', restaurantId, isActive: true, role: {in: ['OWNER','MANAGER']}}});
+      if (!approver) throw new Error('Stock count approval denied');
+    }
     const countCountToday = await prisma.stockCount.count({
       where: {
         restaurantId,
@@ -34,7 +43,7 @@ export class StockCountService {
       },
     });
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const countNumber = `STK-${dateStr}-${(countCountToday + 1).toString().padStart(3, '0')}`;
+    const countNumber = `STK-${dateStr}-${randomUUID()}`;
 
     return await prisma.$transaction(async (tx) => {
       const stockCount = await tx.stockCount.create({
@@ -138,7 +147,7 @@ export class StockCountService {
       );
 
       return { stockCount, items: createdItems };
-    });
+    }, serializable);
   }
 
   /**
@@ -178,6 +187,8 @@ export class StockCountService {
       if (approve) {
         // Record ADJUSTMENT movements for items with variance
         for (const item of stockCount.items) {
+          const current = await tx.outletInventory.findUnique({where: {outletId_ingredientId: {outletId: stockCount.outletId, ingredientId: item.ingredientId}}});
+          if (Math.abs((current?.currentStock || 0) - item.systemStock) > 0.000001) throw new Error('Stock changed after this count. Submit a fresh count.');
           if (item.variance !== 0) {
             await InventoryService.recordMovement(
               {
@@ -212,7 +223,7 @@ export class StockCountService {
       );
 
       return updated;
-    });
+    }, serializable);
   }
 
   static async listStockCounts(restaurantId: string, outletId?: string) {

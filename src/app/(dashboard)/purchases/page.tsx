@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -25,13 +27,13 @@ interface POItem {
   quantity: number;
   unit: string;
   unitPrice: number;
-  totalPrice: number;
+  totalAmount: number;
   ingredient: { name: string; unit: string };
 }
 
 interface PurchaseOrder {
   id: string;
-  orderNumber: string;
+  poNumber: string;
   status: 'DRAFT' | 'ORDERED' | 'RECEIVED' | 'CANCELLED';
   totalAmount: number;
   createdAt: string;
@@ -60,6 +62,7 @@ interface IngredientOption {
 }
 
 export default function PurchasesPage() {
+  const { activeOutletId } = useOutlet();
   const [activeTab, setActiveTab] = useState<'ORDERS' | 'SUPPLIERS'>('ORDERS');
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -93,9 +96,9 @@ export default function PurchasesPage() {
     try {
       setLoading(true);
       const [ordRes, supRes, ingRes] = await Promise.all([
-        fetch('/api/purchases/orders').then((r) => r.json()),
-        fetch('/api/purchases/suppliers').then((r) => r.json()),
-        fetch('/api/ingredients').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/purchases/orders').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/purchases/suppliers').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/ingredients').then((r) => r.json()),
       ]);
 
       if (ordRes.orders) setOrders(ordRes.orders);
@@ -110,7 +113,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeOutletId]);
 
   const openNewPOModal = () => {
     setPOSupplierId(suppliers[0]?.id || '');
@@ -150,7 +153,7 @@ export default function PurchasesPage() {
         };
       });
 
-      const res = await fetch('/api/purchases/orders', {
+      const res = await apiFetch(activeOutletId, '/api/purchases/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -178,7 +181,7 @@ export default function PurchasesPage() {
 
     try {
       setReceiving(true);
-      const res = await fetch('/api/purchases/receive', {
+      const res = await apiFetch(activeOutletId, '/api/purchases/receive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +209,7 @@ export default function PurchasesPage() {
     e.preventDefault();
     try {
       setSavingSup(true);
-      const res = await fetch('/api/purchases/suppliers', {
+      const res = await apiFetch(activeOutletId, '/api/purchases/suppliers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -356,7 +359,7 @@ export default function PurchasesPage() {
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {orders.map((po) => (
                     <tr key={po.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{po.orderNumber}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{po.poNumber}</td>
                       <td className="py-3 px-4 font-medium text-slate-900 flex items-center gap-1.5">
                         <Building2 className="w-4 h-4 text-slate-400" />
                         {po.supplier.name}
@@ -391,7 +394,7 @@ export default function PurchasesPage() {
                             <button
                               onClick={() => {
                                 setReceiveModalPO(po);
-                                setInvoiceNumber(`INV-${po.orderNumber.replace('PO-', '')}`);
+                                setInvoiceNumber(`INV-${po.poNumber.replace('PO-', '')}`);
                               }}
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1"
                             >
@@ -455,7 +458,7 @@ export default function PurchasesPage() {
       )}
 
       {/* Create PO Modal */}
-      <Modal isOpen={isPOModalOpen} onClose={() => setIsPOModalOpen(false)} title="Create Purchase Order" size="lg">
+      <Modal isOpen={isPOModalOpen} onClose={() => setIsPOModalOpen(false)} title="Create Purchase Order" maxWidth="lg">
         <form onSubmit={handleCreatePO} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Select Supplier *</label>
@@ -574,7 +577,7 @@ export default function PurchasesPage() {
         <Modal
           isOpen={!!receiveModalPO}
           onClose={() => setReceiveModalPO(null)}
-          title={`Receive Goods: ${receiveModalPO.orderNumber}`}
+          title={`Receive Goods: ${receiveModalPO.poNumber}`}
         >
           <form onSubmit={handleReceiveGoods} className="space-y-4">
             <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900">
@@ -705,7 +708,7 @@ export default function PurchasesPage() {
 
       {/* PO View Modal */}
       {selectedPO && (
-        <Modal isOpen={!!selectedPO} onClose={() => setSelectedPO(null)} title={`PO: ${selectedPO.orderNumber}`} size="lg">
+        <Modal isOpen={!!selectedPO} onClose={() => setSelectedPO(null)} title={`PO: ${selectedPO.poNumber}`} maxWidth="lg">
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
               <div>
@@ -743,7 +746,7 @@ export default function PurchasesPage() {
                         {formatCurrency(item.unitPrice)}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
-                        {formatCurrency(item.totalPrice)}
+                        {formatCurrency(item.totalAmount)}
                       </td>
                     </tr>
                   ))}

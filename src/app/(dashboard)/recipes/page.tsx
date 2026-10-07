@@ -113,8 +113,10 @@ export default function RecipesPage() {
 
   const fetchOptions = async () => {
     try {
-      const [menuRes, ingRes] = await fetch('/api/menu').then((r) => r.json()).catch(() => ({})),
-        ingData = await fetch('/api/ingredients').then((r) => r.json()).catch(() => ({}));
+      const [menuRes, ingData] = await Promise.all([
+        fetch('/api/menu').then(r => r.json()),
+        fetch('/api/ingredients').then(r => r.json()),
+      ]);
 
       if (menuRes.items) {
         setMenuItems(menuRes.items);
@@ -413,7 +415,7 @@ export default function RecipesPage() {
           isOpen={!!selectedRecipe}
           onClose={() => setSelectedRecipe(null)}
           title={`Recipe: ${selectedRecipe.name}`}
-          size="lg"
+          maxWidth="lg"
         >
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -486,7 +488,7 @@ export default function RecipesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Create Recipe Composition"
-        size="lg"
+        maxWidth="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

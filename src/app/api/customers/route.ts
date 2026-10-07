@@ -1,9 +1,11 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 
-export async function GET(req: NextRequest) {
-  const { auth, errorResponse } = await authenticateRequest(req);
+async function handleGET(req: NextRequest) {
+  const { auth, errorResponse } = await authenticateRequest(req, 'access:pos');
   if (errorResponse || !auth) return errorResponse;
 
   const url = new URL(req.url);
@@ -30,8 +32,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, customers });
 }
 
-export async function POST(req: NextRequest) {
-  const { auth, errorResponse } = await authenticateRequest(req);
+async function handlePOST(req: NextRequest) {
+  const { auth, errorResponse } = await authenticateRequest(req, 'access:pos');
   if (errorResponse || !auth) return errorResponse;
 
   const data = await req.json();
@@ -58,3 +60,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, customer });
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

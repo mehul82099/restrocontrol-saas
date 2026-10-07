@@ -3,13 +3,16 @@ import { cn } from '@/lib/utils';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'normal' | 'low_stock' | 'warning' | 'critical' | 'approved' | 'pending' | 'rejected' | 'outline' | 'info';
+  variant?: 'success' | 'danger' | 'neutral' | 'normal' | 'low_stock' | 'warning' | 'critical' | 'approved' | 'pending' | 'rejected' | 'outline' | 'info';
   className?: string;
   size?: 'sm' | 'md';
 }
 
 export function Badge({ children, variant = 'normal', className, size = 'sm' }: BadgeProps) {
   const variantStyles = {
+    success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    danger: 'bg-rose-50 text-rose-700 border-rose-300',
+    neutral: 'bg-slate-50 text-slate-700 border-slate-200',
     normal: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     low_stock: 'bg-amber-50 text-amber-700 border-amber-300 font-semibold',
     warning: 'bg-yellow-50 text-yellow-800 border-yellow-300',

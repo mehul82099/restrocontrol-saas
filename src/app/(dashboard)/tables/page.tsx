@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -34,6 +36,7 @@ interface DiningTable {
 }
 
 export default function TablesPage() {
+  const { activeOutletId } = useOutlet();
   const [tables, setTables] = useState<DiningTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSection, setSelectedSection] = useState('ALL');
@@ -48,7 +51,7 @@ export default function TablesPage() {
   const fetchTables = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/tables');
+      const res = await apiFetch(activeOutletId, '/api/tables');
       const data = await res.json();
       if (data.success) {
         setTables(data.tables);
@@ -62,13 +65,13 @@ export default function TablesPage() {
 
   useEffect(() => {
     fetchTables();
-  }, []);
+  }, [activeOutletId]);
 
   const handleAddTable = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await fetch('/api/tables', {
+      const res = await apiFetch(activeOutletId, '/api/tables', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tableNumber, capacity, section }),

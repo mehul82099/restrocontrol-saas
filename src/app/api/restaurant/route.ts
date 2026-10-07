@@ -1,9 +1,11 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 import { AuditService } from '@/server/services/audit.service';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
   if (errorResponse || !auth) return errorResponse;
 
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, restaurant });
 }
 
-export async function PUT(req: NextRequest) {
+async function handlePUT(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:restaurant');
   if (errorResponse || !auth) return errorResponse;
 
@@ -51,3 +53,9 @@ export async function PUT(req: NextRequest) {
 
   return NextResponse.json({ success: true, restaurant: updated });
 }
+
+export const PUT = protectMutation(handlePUT);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

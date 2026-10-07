@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -23,10 +25,10 @@ interface WastageRecord {
   ingredientId: string;
   quantity: number;
   unit: string;
-  costImpact: number;
+  totalCost: number;
   reason: string;
   notes?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   ingredient: {
     name: string;
@@ -48,6 +50,7 @@ interface IngredientOption {
 }
 
 export default function WastagePage() {
+  const { activeOutletId } = useOutlet();
   const [wastages, setWastages] = useState<WastageRecord[]>([]);
   const [ingredients, setIngredients] = useState<IngredientOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +70,8 @@ export default function WastagePage() {
     try {
       setLoading(true);
       const [wRes, iRes] = await Promise.all([
-        fetch('/api/wastage').then((r) => r.json()),
-        fetch('/api/ingredients').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/wastage').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/ingredients').then((r) => r.json()),
       ]);
 
       if (wRes.wastages) setWastages(wRes.wastages);
@@ -82,7 +85,7 @@ export default function WastagePage() {
 
   useEffect(() => {
     fetchWastages();
-  }, []);
+  }, [activeOutletId]);
 
   const handleIngredientChange = (id: string) => {
     setIngredientId(id);
@@ -96,7 +99,7 @@ export default function WastagePage() {
     e.preventDefault();
     try {
       setSaving(true);
-      const res = await fetch('/api/wastage', {
+      const res = await apiFetch(activeOutletId, '/api/wastage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +127,7 @@ export default function WastagePage() {
 
   const handleApproval = async (id: string, approve: boolean) => {
     try {
-      const res = await fetch(`/api/wastage/${id}/approve`, {
+      const res = await apiFetch(activeOutletId, `/api/wastage/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approve }),
@@ -141,9 +144,9 @@ export default function WastagePage() {
 
   const totalCost = wastages
     .filter((w) => w.status === 'APPROVED')
-    .reduce((sum, w) => sum + (w.costImpact || 0), 0);
+    .reduce((sum, w) => sum + (w.totalCost || 0), 0);
 
-  const pendingCount = wastages.filter((w) => w.status === 'PENDING').length;
+  const pendingCount = wastages.filter((w) => w.status === 'PENDING_APPROVAL').length;
 
   const filtered = wastages.filter((w) => {
     const matchesStatus = filterStatus === 'ALL' || w.status === filterStatus;
@@ -229,7 +232,7 @@ export default function WastagePage() {
           </div>
 
           <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
+            {['ALL', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'].map((st) => (
               <button
                 key={st}
                 onClick={() => setFilterStatus(st)}
@@ -278,7 +281,7 @@ export default function WastagePage() {
                       -{item.quantity} {item.unit}
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-slate-900">
-                      {formatCurrency(item.costImpact)}
+                      {formatCurrency(item.totalCost)}
                     </td>
                     <td className="py-3 px-4">
                       <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md text-xs font-semibold">
@@ -295,14 +298,14 @@ export default function WastagePage() {
                     <td className="py-3 px-4 text-center">
                       {item.status === 'APPROVED' ? (
                         <Badge variant="success">APPROVED</Badge>
-                      ) : item.status === 'PENDING' ? (
+                      ) : item.status === 'PENDING_APPROVAL' ? (
                         <Badge variant="warning">PENDING</Badge>
                       ) : (
                         <Badge variant="danger">REJECTED</Badge>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {item.status === 'PENDING' ? (
+                      {item.status === 'PENDING_APPROVAL' ? (
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => handleApproval(item.id, true)}

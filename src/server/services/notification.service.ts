@@ -28,24 +28,24 @@ export class NotificationService {
     });
   }
 
-  static async getNotifications(restaurantId: string, limit = 50) {
+  static async getNotifications(restaurantId: string, outletId: string, limit = 50) {
     return await prisma.notification.findMany({
-      where: { restaurantId },
+      where: { restaurantId, OR: [{outletId}, {outletId: null}] },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
   }
 
-  static async markAsRead(restaurantId: string, id: string) {
+  static async markAsRead(restaurantId: string, id: string, outletId: string) {
     return await prisma.notification.updateMany({
-      where: { id, restaurantId },
+      where: { id, restaurantId, OR: [{outletId}, {outletId: null}] },
       data: { isRead: true },
     });
   }
 
-  static async markAllAsRead(restaurantId: string) {
+  static async markAllAsRead(restaurantId: string, outletId: string) {
     return await prisma.notification.updateMany({
-      where: { restaurantId, isRead: false },
+      where: { restaurantId, isRead: false, OR: [{outletId}, {outletId: null}] },
       data: { isRead: true },
     });
   }

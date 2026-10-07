@@ -1,5 +1,6 @@
 'use client';
 
+import { apiFetch } from '@/lib/api-fetch';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,7 +30,7 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await apiFetch(activeOutletId, '/api/notifications');
       const data = await res.json();
       if (data.success) {
         setNotifications(data.notifications || []);
@@ -45,11 +46,11 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 20000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeOutletId]);
 
   const handleMarkAllRead = async () => {
     try {
-      await fetch('/api/notifications', {
+      await apiFetch(activeOutletId, '/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_all_read' }),
@@ -63,7 +64,7 @@ export function Header({ user, activeOutletId, onOutletChange }: HeaderProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await apiFetch(activeOutletId, '/api/auth/logout', { method: 'POST' });
       router.push('/login');
     } catch {
       router.push('/login');

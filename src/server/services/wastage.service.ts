@@ -1,3 +1,5 @@
+import { finiteNumber, assertTenantReference, serializable } from './validation';
+import { UnitConverter } from './unit-converter';
 import { prisma } from '../db/prisma';
 import { WastageReason, ApprovalStatus, MovementType } from '@prisma/client';
 import { InventoryService } from './inventory.service';
@@ -27,9 +29,12 @@ export class WastageService {
       throw new Error('Ingredient not found or tenant mismatch');
     }
 
-    const unit = input.unit || ingredient.unit;
+    finiteNumber(quantity, 'quantity', 0.000001);
+    await assertTenantReference('outlet', outletId, restaurantId);
+    const unit = ingredient.unit;
+    const normalizedQuantity = UnitConverter.convert(quantity, input.unit || unit, unit);
     const costPerUnit = ingredient.costPerUnit;
-    const totalCost = quantity * costPerUnit;
+    const totalCost = normalizedQuantity * costPerUnit;
 
     // Configurable threshold: e.g. if totalCost <= threshold (default 500), auto-approve; otherwise PENDING_APPROVAL
     const threshold = input.autoApproveThreshold ?? 500;
@@ -41,7 +46,7 @@ export class WastageService {
           restaurantId,
           outletId,
           ingredientId,
-          quantity,
+          quantity: normalizedQuantity,
           unit,
           costPerUnit,
           totalCost,
@@ -61,7 +66,7 @@ export class WastageService {
             outletId,
             ingredientId,
             movementType: MovementType.WASTAGE,
-            quantity: -quantity, // deduct
+            quantity: -normalizedQuantity, // deduct
             unit,
             costPerUnit,
             referenceType: 'WASTAGE',
@@ -99,7 +104,7 @@ export class WastageService {
       );
 
       return wastage;
-    });
+    }, serializable);
   }
 
   static async approveWastage(
@@ -165,7 +170,7 @@ export class WastageService {
       );
 
       return updated;
-    });
+    }, serializable);
   }
 
   static async listWastages(restaurantId: string, outletId?: string) {

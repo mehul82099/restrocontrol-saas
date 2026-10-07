@@ -1,5 +1,7 @@
 import { prisma } from '../db/prisma';
 import { MovementType, Prisma } from '@prisma/client';
+import { UnitConverter } from './unit-converter';
+import { finiteNumber, assertTenantReference, serializable } from './validation';
 import { NotificationService } from './notification.service';
 
 export interface MovementInput {
@@ -25,17 +27,25 @@ export class InventoryService {
     input: MovementInput,
     tx?: Prisma.TransactionClient
   ) {
-    const db = tx || prisma;
+    if (!tx) return prisma.$transaction(inner => InventoryService.recordMovement(input, inner), serializable);
+    const db = tx;
+    finiteNumber(input.quantity, 'quantity', -1e9);
+    if (input.costPerUnit !== undefined) finiteNumber(input.costPerUnit, 'cost');
+    await assertTenantReference('outlet', input.outletId, input.restaurantId, db);
 
     // 1. Fetch current ingredient & outlet inventory
     const ingredient = await db.ingredient.findUnique({
       where: { id: input.ingredientId },
     });
-    if (!ingredient) {
+    if (!ingredient || ingredient.restaurantId !== input.restaurantId) {
       throw new Error(`Ingredient not found: ${input.ingredientId}`);
     }
 
-    const unit = input.unit || ingredient.unit;
+    const sourceUnit = input.unit || ingredient.unit;
+    const convertedQuantity = UnitConverter.convert(input.quantity, sourceUnit, ingredient.unit);
+    const ratio = UnitConverter.convert(1, sourceUnit, ingredient.unit);
+    input = {...input, quantity: convertedQuantity, costPerUnit: input.costPerUnit === undefined ? undefined : input.costPerUnit / ratio};
+    const unit = ingredient.unit;
     const costPerUnit = input.costPerUnit ?? ingredient.costPerUnit;
     const totalCost = Math.abs(input.quantity) * costPerUnit;
 

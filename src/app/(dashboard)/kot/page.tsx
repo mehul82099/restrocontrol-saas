@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import { useOutlet } from '../layout';
@@ -24,7 +25,7 @@ export default function KotPage() {
   const fetchTickets = async () => {
     if (!activeOutletId) return;
     try {
-      const res = await fetch(`/api/kot?outletId=${activeOutletId}`);
+      const res = await apiFetch(activeOutletId, `/api/kot?outletId=${activeOutletId}`);
       const data = await res.json();
       if (data.success) {
         setTickets(data.tickets || []);
@@ -45,9 +46,9 @@ export default function KotPage() {
 
   const updateStatus = async (ticketId: string, newStatus: string) => {
     try {
-      const res = await fetch(`/api/kot/${ticketId}/status`, {
+      const res = await apiFetch(activeOutletId, `/api/kot/${ticketId}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-outlet-id': activeOutletId },
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
