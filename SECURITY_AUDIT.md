@@ -14,7 +14,7 @@ This review does not prove that every bug or vulnerability has been found. It co
 |---|---|---|---|
 | Critical | Public fallback JWT key permits token forgery when configuration is missing | src/server/auth/jwt.ts | Remove fallback; reject weak/unconfigured keys; restrict JWT verification to HS256; shorten sessions to 12 hours |
 | Critical | Public .env contains signing secrets | .env in initial public commit | Remove tracked .env, ignore private env files; production key rotation still required; historical git copies remain |
-| Critical | Public demo OWNER and other accounts use shared seeded credentials | login page and scripts/seed.js | Production seed now requires explicit opt-in. Live demo login remains unchanged pending owner decision and safe replacement access |
+| Critical | Public demo OWNER and other accounts use shared seeded credentials | login page and scripts/seed.js | Production seed now requires explicit opt-in. Live demo login remains unchanged kept at the owner's explicit request on 7 October 2026 |
 | High | Signed token role stays valid after user disable/demotion | auth/middleware.ts | Reload active user and DB role for every request |
 | High | Arbitrary outlet headers/queries accepted; staff not restricted to assigned outlets | auth/middleware.ts and auth/me | Resolve active tenant-owned outlets and enforce staff assignments |
 | High | Manager can create an OWNER account; omitted passwords become a known default | api/users | Restrict non-owner role assignment; require a supplied 12-72 character password |
@@ -62,7 +62,7 @@ This review does not prove that every bug or vulnerability has been found. It co
 ## Remaining risks and follow-up
 
 1. Publish and verify branch/PR, configure a fresh random JWT_SECRET in Vercel, then deploy. Existing sessions will be signed out by rotation. Never reuse the public committed signing value. Secrets are write-only in the current Vercel UI, so the current live value could not be compared with the public file.
-2. Decide whether this is strictly a public demo sandbox or a real restaurant system. Disable or replace seeded privileged credentials before private data is stored. This cannot be safely finalized without preserving an owner login route. Seed opt-in alone does not disable already-created demo accounts.
+2. Owner chose "For now keep them" on 7 October 2026. Demo account access remains intentionally enabled. Treat this as a public demo sandbox, not a private restaurant system. Disable or replace seeded privileged credentials before private data is stored. This cannot be safely finalized without preserving an owner login route. Seed opt-in alone does not disable already-created demo accounts.
 3. Five high npm findings remain in the build-only Tailwind 3 glob chain (braces, chokidar, micromatch, fast-glob, tailwindcss). The braces advisory has no patched compatible version currently published; Tailwind 4 migration changes CSS/build tooling and needs separate visual validation. No server accepts user-provided glob patterns in the reviewed code.
 4. Live/Preview deployment tests are not complete. No production exploit, forged token, live refund, stock change or customer-data mutation was attempted.
 5. Financial reports still need a reviewed accounting policy for net revenue, partial refunds, tax allocation and date boundaries in each restaurant timezone. Gross report totals can include refunded orders; not suitable as audited financial accounts yet.
