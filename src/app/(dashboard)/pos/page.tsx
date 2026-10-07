@@ -287,9 +287,9 @@ export default function PosPage() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-6rem)] max-w-[1600px] mx-auto select-none">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100dvh-6rem)] max-w-[1600px] mx-auto select-none">
       {/* LEFT: Catalog & Item Grid */}
-      <div className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-5">
+      <div className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-3 sm:p-5 h-[75dvh] lg:h-auto flex-shrink-0 lg:flex-shrink">
         {/* Top Controls: Order Type & Search */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4">
           {/* Order Type Selector */}
