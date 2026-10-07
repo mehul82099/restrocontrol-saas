@@ -31,6 +31,11 @@ export default function DashboardLayout({
   const [user, setUser] = useState<any>(null);
   const [activeOutletId, setActiveOutletId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const fetchUser = async () => {
     try {
@@ -80,9 +85,9 @@ export default function DashboardLayout({
         refreshUser: fetchUser,
       }}
     >
-      <div className="flex h-screen bg-slate-50 overflow-hidden">
+      <div className="flex h-[100dvh] bg-slate-50 overflow-hidden">
         {/* Sidebar */}
-        <Sidebar userRole={user?.role} />
+        <Sidebar userRole={user?.role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -90,8 +95,9 @@ export default function DashboardLayout({
             user={user}
             activeOutletId={activeOutletId}
             onOutletChange={setActiveOutletId}
+            onMenuClick={() => setSidebarOpen(true)}
           />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/70">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-slate-50/70">
             {children}
           </main>
         </div>
