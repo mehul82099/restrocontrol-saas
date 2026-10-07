@@ -1,8 +1,9 @@
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { StockCountService } from '@/server/services/stock-count.service';
 
-export async function POST(
+async function handlePOST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -26,3 +27,7 @@ export async function POST(
     );
   }
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';

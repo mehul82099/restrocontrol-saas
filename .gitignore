@@ -26,3 +26,9 @@ yarn-error.log*
 *.pem
 .vscode
 .idea
+
+.env
+.env.*
+!.env.example
+*.so
+*.tsbuildinfo

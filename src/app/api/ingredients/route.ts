@@ -1,10 +1,12 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 import { AuditService } from '@/server/services/audit.service';
 
-export async function GET(req: NextRequest) {
-  const { auth, errorResponse } = await authenticateRequest(req);
+async function handleGET(req: NextRequest) {
+  const { auth, errorResponse } = await authenticateRequest(req, 'view:inventory');
   if (errorResponse || !auth) return errorResponse;
 
   const ingredients = await prisma.ingredient.findMany({
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, ingredients: formatted });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:ingredients');
   if (errorResponse || !auth) return errorResponse;
 
@@ -89,3 +91,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, ingredient });
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

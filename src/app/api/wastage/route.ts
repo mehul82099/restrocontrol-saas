@@ -1,8 +1,10 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { WastageService } from '@/server/services/wastage.service';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:wastage');
   if (errorResponse || !auth) return errorResponse;
 
@@ -10,7 +12,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, wastages });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:wastage');
   if (errorResponse || !auth) return errorResponse;
 
@@ -35,3 +37,9 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

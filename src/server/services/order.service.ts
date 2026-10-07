@@ -1,3 +1,5 @@
+import { finiteNumber, assertTenantReference, serializable } from './validation';
+import { randomUUID } from 'crypto';
 import { prisma } from '../db/prisma';
 import {
   OrderType,
@@ -71,7 +73,8 @@ export class OrderService {
       });
 
       if (existing) {
-        return { order: existing, isDuplicate: true };
+        if (existing.restaurantId !== restaurantId || existing.outletId !== outletId) throw new Error('Invalid idempotency key');
+        return { order: existing, items: existing.items, kot: existing.kitchenOrder, consumption: [], isDuplicate: true };
       }
     }
 
@@ -79,6 +82,46 @@ export class OrderService {
     if (!input.items || input.items.length === 0) {
       throw new Error('Order must contain at least one item');
     }
+
+    if (!Object.values(OrderType).includes(input.orderType)) throw new Error('Invalid order type');
+    if (input.items.length > 200) throw new Error('Too many order items');
+    await assertTenantReference('outlet', outletId, restaurantId);
+    if (input.tableId) await assertTenantReference('diningTable', input.tableId, restaurantId, prisma, outletId);
+    if (input.customerId) await assertTenantReference('customer', input.customerId, restaurantId);
+    let subtotal = 0;
+    let rawTax = 0;
+    for (const item of input.items) {
+      finiteNumber(item.quantity, 'quantity', 1, 10000);
+      if (!Number.isInteger(item.quantity)) throw new Error('Quantity must be an integer');
+      const menu = await prisma.menuItem.findFirst({where: {id: item.menuItemId, restaurantId, isAvailable: true}, include: {variants: true, addons: true}});
+      if (!menu) throw new Error('Menu item unavailable');
+      const variant = item.variantId ? menu.variants.find(v => v.id === item.variantId && v.isActive) : null;
+      if (item.variantId && !variant) throw new Error('Invalid menu variant');
+      const addons = (item.addons || []).map((a: any) => {
+        const found = menu.addons.find(x => x.isActive && (a.id ? x.id === a.id : x.name === a.name));
+        if (!found) throw new Error('Invalid addon');
+        return {name: found.name, price: found.price};
+      });
+      if (new Set(addons.map(a => a.name)).size !== addons.length) throw new Error('Duplicate addon');
+      const price = (variant?.price ?? menu.basePrice) + addons.reduce((n,a) => n + a.price, 0);
+      item.name = menu.name;
+      item.unitPrice = Math.round(price * 100) / 100;
+      item.totalPrice = Math.round(item.unitPrice * item.quantity * 100) / 100;
+      item.discountAmount = 0;
+      item.addons = addons;
+      subtotal += item.totalPrice;
+      rawTax += item.totalPrice * menu.taxRate / 100;
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+    finiteNumber(input.discountAmount ?? 0, 'discount', 0, subtotal);
+    finiteNumber(input.deliveryFee ?? 0, 'delivery fee');
+    finiteNumber(input.tipAmount ?? 0, 'tip');
+    const discount = input.discountAmount || 0;
+    const tax = Math.round(rawTax * (subtotal ? (subtotal - discount) / subtotal : 0) * 100) / 100;
+    const total = Math.round((subtotal - discount + tax + (input.deliveryFee || 0) + (input.tipAmount || 0)) * 100) / 100;
+    if (Math.abs(input.totalAmount - total) > 0.01 || !Number.isFinite(input.totalAmount)) throw new Error('Total changed. Reload the catalog and retry.');
+    input.subtotal = subtotal; input.taxAmount = tax; input.totalAmount = total;
+    for (const payment of input.payments || []) {finiteNumber(payment.amount, 'payment', 0.01); if (!Object.values(PaymentMethod).includes(payment.paymentMethod)) throw new Error('Invalid payment method');}
 
     // 3. Pre-calculate Recipe Consumption for all items
     const orderItemsForEngine: OrderItemInput[] = input.items.map((i) => ({
@@ -102,8 +145,8 @@ export class OrderService {
         },
       },
     });
-    const orderNumber = `ORD-${dateStr}-${(orderCountToday + 1).toString().padStart(4, '0')}`;
-    const kotNumber = `KOT-${dateStr}-${(orderCountToday + 1).toString().padStart(4, '0')}`;
+    const orderNumber = `ORD-${dateStr}-${randomUUID()}`;
+    const kotNumber = `KOT-${dateStr}-${randomUUID()}`;
 
     // 5. Execute everything inside an atomic transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -275,10 +318,10 @@ export class OrderService {
         consumption: consumptionPlan,
         isDuplicate: false,
       };
-    });
+    }, serializable);
 
     // Invalidate dashboard caches for this outlet
-    await cache.del(`dashboard:${restaurantId}:${outletId}`);
+    await cache.invalidatePattern(`dashboard:${restaurantId}:${outletId}:*`);
 
     return result;
   }
@@ -303,7 +346,7 @@ export class OrderService {
         throw new Error('Order not found or tenant mismatch');
       }
 
-      if (order.status === OrderStatus.CANCELLED) {
+      if ([OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(order.status as any)) {
         throw new Error('Order is already cancelled');
       }
 
@@ -370,7 +413,7 @@ export class OrderService {
       );
 
       return updatedOrder;
-    });
+    }, serializable);
   }
 
   /**
@@ -392,11 +435,18 @@ export class OrderService {
         throw new Error('Order not found or tenant mismatch');
       }
 
+      finiteNumber(refundAmount, 'refund amount', 0.01);
+      if ([OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(order.status as any)) throw new Error('Order cannot be refunded');
+      const previousRefunds = await tx.payment.aggregate({where: {orderId, status: 'REFUNDED'}, _sum: {amount: true}});
+      const refunded = -(previousRefunds._sum.amount || 0);
+      const remaining = order.paidAmount - refunded;
+      if (refundAmount > remaining) throw new Error('Refund exceeds amount paid');
+      const fullyRefunded = Math.abs(remaining - refundAmount) < 0.01;
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: {
-          paymentStatus: PaymentStatus.REFUNDED,
-          status: OrderStatus.REFUNDED,
+          paymentStatus: fullyRefunded ? PaymentStatus.REFUNDED : order.paymentStatus,
+          status: fullyRefunded ? OrderStatus.REFUNDED : order.status,
           notes: `${order.notes || ''} [Refunded ₹${refundAmount}: ${reason || 'N/A'}]`,
         },
       });
@@ -427,6 +477,6 @@ export class OrderService {
       );
 
       return updatedOrder;
-    });
+    }, serializable);
   }
 }

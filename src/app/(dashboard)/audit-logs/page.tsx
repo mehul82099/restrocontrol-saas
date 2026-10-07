@@ -48,7 +48,7 @@ export default function AuditLogsPage() {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
-        setLogs(data.logs);
+        setLogs(data.logs.map((log: any) => ({...log, beforeState: log.before ? JSON.parse(log.before) : null, afterState: log.after ? JSON.parse(log.after) : null})));
       }
     } catch (err) {
       console.error('Failed to load audit logs', err);
@@ -236,7 +236,7 @@ export default function AuditLogsPage() {
           isOpen={!!selectedLog}
           onClose={() => setSelectedLog(null)}
           title={`Audit Event: ${selectedLog.action}`}
-          size="lg"
+          maxWidth="lg"
         >
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">

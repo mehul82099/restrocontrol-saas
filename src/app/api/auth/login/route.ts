@@ -8,14 +8,14 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || email.length > 254 || password.length > 72 || !email || !password) {
       return NextResponse.json(
         { success: false, error: 'Email and password are required.' },
         { status: 400 }
       );
     }
 
-    const user = await prisma.user.findFirst({
+    const candidates = await prisma.user.findMany({
       where: { email: email.toLowerCase().trim() },
       include: {
         restaurant: true,
@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const user = candidates.length === 1 ? candidates[0] : null;
     if (!user || !user.isActive) {
       return NextResponse.json(
         { success: false, error: 'Invalid email or password.' },
@@ -32,6 +33,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cutoff = new Date(Date.now() - 15 * 60 * 1000);
+    const attemptAllowed = await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id} FOR UPDATE`;
+      const count = await tx.auditLog.count({where: {restaurantId: user.restaurantId, entityId: user.id, action: 'LOGIN_ATTEMPT', createdAt: {gte: cutoff}}});
+      if (count >= 10) return false;
+      await tx.auditLog.create({data: {restaurantId: user.restaurantId, entity: 'User', entityId: user.id, action: 'LOGIN_ATTEMPT'}});
+      return true;
+    });
+    if (!attemptAllowed) return NextResponse.json({success: false, error: 'Too many login attempts. Try again in 15 minutes.'}, {status: 429});
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       return NextResponse.json(
@@ -68,7 +78,6 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      token,
       user: {
         id: user.id,
         email: user.email,
@@ -88,14 +97,16 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 12 * 60 * 60, // 7 days
     });
 
     return response;
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Login failed.' },
+      { success: false, error: 'Login could not be completed.' },
       { status: 500 }
     );
   }
 }
+
+export const dynamic = 'force-dynamic';

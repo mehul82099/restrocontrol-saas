@@ -1,15 +1,17 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { AuditService } from '@/server/services/audit.service';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
   if (errorResponse || !auth) return errorResponse;
 
   const outlets = await prisma.outlet.findMany({
-    where: { restaurantId: auth.restaurantId },
+    where: { restaurantId: auth.restaurantId, ...(auth.user.role === 'OWNER' ? {} : {userOutlets: {some: {userId: auth.user.userId}}}) },
     include: {
       _count: {
         select: { tables: true, orders: true },
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, outlets });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:outlets');
   if (errorResponse || !auth) return errorResponse;
 
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   // Automatically initialize outlet inventory records for existing ingredients
   const ingredients = await prisma.ingredient.findMany({
-    where: { restaurantId: auth.restaurantId },
+    where: { restaurantId: auth.restaurantId, ...(auth.user.role === 'OWNER' ? {} : {userOutlets: {some: {userId: auth.user.userId}}}) },
   });
 
   for (const ing of ingredients) {
@@ -71,3 +73,9 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ success: true, outlet });
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

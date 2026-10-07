@@ -1,9 +1,11 @@
+import { protectRead } from '@/server/services/api-validation';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { prisma } from '@/server/db/prisma';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
   if (errorResponse || !auth) return errorResponse;
 
@@ -15,7 +17,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, subscription: sub, plans: allPlans });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:subscription');
   if (errorResponse || !auth) return errorResponse;
 
@@ -25,16 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid plan code' }, { status: 400 });
   }
 
-  const updatedSub = await prisma.subscription.update({
-    where: { restaurantId: auth.restaurantId },
-    data: {
-      planId: plan.id,
-      status: 'ACTIVE',
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-    include: { plan: true },
-  });
-
-  return NextResponse.json({ success: true, subscription: updatedSub });
+  return NextResponse.json({success: false, error: 'Plan changes require verified billing and are not available in this demo.'}, {status: 403});
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

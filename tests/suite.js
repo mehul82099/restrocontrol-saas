@@ -1,3 +1,4 @@
+if (!/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL || '')) throw new Error('Tests require an isolated local database; refusing remote database');
 const path = require('path');
 const assert = require('node:assert');
 const jiti = require('jiti')(path.resolve(__dirname, 'test-helper.js'));
@@ -84,7 +85,7 @@ async function runSuite() {
       outletId: outlet.id,
       orderType: 'TAKEAWAY',
       subtotal: dish.basePrice,
-      totalAmount: dish.basePrice,
+      totalAmount: Math.round(dish.basePrice * (1 + dish.taxRate / 100) * 100) / 100,
       items: [
         {
           menuItemId: dish.id,
@@ -134,7 +135,7 @@ async function runSuite() {
       outletId: outlet.id,
       orderType: 'DINE_IN',
       subtotal: dish.basePrice * orderQty,
-      totalAmount: dish.basePrice * orderQty,
+      totalAmount: Math.round(dish.basePrice * orderQty * (1 + dish.taxRate / 100) * 100) / 100,
       items: [
         {
           menuItemId: dish.id,
@@ -165,7 +166,7 @@ async function runSuite() {
       outletId: outlet.id,
       orderType: 'TAKEAWAY',
       subtotal: dish.basePrice,
-      totalAmount: dish.basePrice,
+      totalAmount: Math.round(dish.basePrice * (1 + dish.taxRate / 100) * 100) / 100,
       items: [
         {
           menuItemId: dish.id,
@@ -204,7 +205,7 @@ async function runSuite() {
       outletId: outlet.id,
       orderType: 'DINE_IN',
       subtotal: dish.basePrice,
-      totalAmount: dish.basePrice,
+      totalAmount: Math.round(dish.basePrice * (1 + dish.taxRate / 100) * 100) / 100,
       items: [
         {
           menuItemId: dish.id,
@@ -310,10 +311,7 @@ async function runSuite() {
         where: { outletId_ingredientId: { outletId: outlet.id, ingredientId: onion.id } },
       })
     ).currentStock;
-    assert.strictEqual(
-      Math.round(updatedStock * 1000) / 1000,
-      Math.round((initialStock - wastageQty) * 1000) / 1000
-    );
+    assert.ok(Math.abs(updatedStock - (initialStock - wastageQty)) < 0.000001);
   });
 
   // TEST 8: Stock Count Workflow
@@ -434,7 +432,7 @@ async function runSuite() {
       outletId: outlet.id,
       orderType: 'TAKEAWAY',
       subtotal: dish.basePrice,
-      totalAmount: dish.basePrice,
+      totalAmount: Math.round(dish.basePrice * (1 + dish.taxRate / 100) * 100) / 100,
       idempotencyKey,
       items: [
         { menuItemId: dish.id, name: dish.name, quantity: 1, unitPrice: dish.basePrice, totalPrice: dish.basePrice },

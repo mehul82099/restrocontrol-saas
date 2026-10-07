@@ -1,4 +1,7 @@
 import { prisma } from '../db/prisma';
+import { randomUUID } from 'crypto';
+import { UnitConverter } from './unit-converter';
+import { finiteNumber, assertTenantReference, serializable } from './validation';
 import { POStatus, MovementType } from '@prisma/client';
 import { InventoryService } from './inventory.service';
 import { AuditService } from './audit.service';
@@ -28,6 +31,15 @@ export class PurchaseService {
   static async createPO(input: CreatePOInput) {
     const { restaurantId, outletId, supplierId, items, notes, expectedDate, createdByUserId } = input;
 
+    await assertTenantReference('outlet', outletId, restaurantId);
+    await assertTenantReference('supplier', supplierId, restaurantId);
+    if (!Array.isArray(items) || !items.length || items.length > 200) throw new Error('Invalid items');
+    for (const item of items) {
+      finiteNumber(item.quantity, 'quantity', 0.000001);
+      finiteNumber(item.unitPrice, 'price');
+      const ingredient = await assertTenantReference('ingredient', item.ingredientId, restaurantId);
+      UnitConverter.convert(item.quantity, item.unit, ingredient.unit);
+    }
     const countToday = await prisma.purchaseOrder.count({
       where: {
         restaurantId,
@@ -35,7 +47,7 @@ export class PurchaseService {
       },
     });
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const poNumber = `PO-${dateStr}-${(countToday + 1).toString().padStart(3, '0')}`;
+    const poNumber = `PO-${dateStr}-${randomUUID()}`;
 
     let subtotal = 0;
     const poItemsData = items.map((item) => {
@@ -102,7 +114,7 @@ export class PurchaseService {
         throw new Error('Purchase order has already been received');
       }
 
-      const receiptNumber = `GRN-${Date.now().toString().slice(-6)}`;
+      const receiptNumber = `GRN-${randomUUID()}`;
 
       // Create Goods Receipt record
       const goodsReceipt = await tx.goodsReceipt.create({
@@ -147,7 +159,7 @@ export class PurchaseService {
         // Store latest purchase price on ingredient
         await tx.ingredient.update({
           where: { id: item.ingredientId },
-          data: { costPerUnit: item.unitPrice },
+          data: { costPerUnit: item.unitPrice / UnitConverter.convert(1, item.unit, item.ingredient.unit) },
         });
       }
 
@@ -186,7 +198,7 @@ export class PurchaseService {
       );
 
       return { purchaseOrder: updatedPO, goodsReceipt };
-    });
+    }, serializable);
   }
 
   /**
@@ -208,7 +220,9 @@ export class PurchaseService {
         throw new Error('PO not found or tenant mismatch');
       }
 
-      const returnNumber = `PR-${Date.now().toString().slice(-6)}`;
+      if (po.status !== POStatus.RECEIVED) throw new Error('Only received purchases can be returned');
+      for (const item of returnItems) {finiteNumber(item.quantity, 'return quantity', 0.000001); finiteNumber(item.unitPrice, 'price');}
+      const returnNumber = `PR-${randomUUID()}`;
       let totalAmount = 0;
 
       for (const item of returnItems) {

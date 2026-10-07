@@ -1,8 +1,9 @@
+import { protectRead } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'access:pos');
   if (errorResponse || !auth) return errorResponse;
 
@@ -41,3 +42,7 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

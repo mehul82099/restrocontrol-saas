@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -49,7 +51,7 @@ const REPORT_CATEGORIES: ReportCategory[] = [
   {
     title: 'COSTING & PROCUREMENTS',
     reports: [
-      { id: 'purchase', name: 'Purchases & Inbound', description: 'All POs, vendor receipts, and restock spend' },
+      { id: 'purchases', name: 'Purchases & Inbound', description: 'All POs, vendor receipts, and restock spend' },
       { id: 'supplier', name: 'Supplier Procurement', description: 'Spend breakdown grouped by vendor' },
       { id: 'purchase_price_history', name: 'Price Fluctuation History', description: 'Historical unit price trends per ingredient' },
       { id: 'recipe_costing', name: 'Recipe Cost Breakdown', description: 'Bill of materials costing per dish' },
@@ -61,6 +63,7 @@ const REPORT_CATEGORIES: ReportCategory[] = [
 ];
 
 export default function ReportsPage() {
+  const { activeOutletId } = useOutlet();
   const [selectedReport, setSelectedReport] = useState('sales');
   const [dateFilter, setDateFilter] = useState('7days');
   const [loading, setLoading] = useState(false);
@@ -75,10 +78,10 @@ export default function ReportsPage() {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/reports?type=${selectedReport}&filter=${dateFilter}&format=json`);
+      const res = await apiFetch(activeOutletId, `/api/reports?type=${selectedReport}&filter=${dateFilter}&format=json`);
       const data = await res.json();
       if (data.success) {
-        setReportData(data);
+        setReportData({...data, rows: data.rows.map((row: any) => data.headers.map((header: string) => row[header]))});
       }
     } catch (err) {
       console.error('Failed to load report', err);
@@ -89,10 +92,10 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchReport();
-  }, [selectedReport, dateFilter]);
+  }, [selectedReport, dateFilter, activeOutletId]);
 
   const handleExportCSV = () => {
-    window.location.href = `/api/reports?type=${selectedReport}&filter=${dateFilter}&format=csv`;
+    window.location.href = `/api/reports?type=${selectedReport}&filter=${dateFilter}&outletId=${activeOutletId}&format=csv`;
   };
 
   const filteredRows = (reportData?.rows || []).filter((row) =>
@@ -106,7 +109,7 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <BarChart3 className="w-7 h-7 text-emerald-600" />
-            20+ Business & Inventory Reports
+            Business & Inventory Reports
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Exportable operational metrics, inventory reconciliations, food costing, and audit summaries

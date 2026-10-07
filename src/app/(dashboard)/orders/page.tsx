@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -61,6 +63,7 @@ interface Order {
 }
 
 export default function OrdersPage() {
+  const { activeOutletId } = useOutlet();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -82,7 +85,7 @@ export default function OrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/orders');
+      const res = await apiFetch(activeOutletId, '/api/orders');
       const data = await res.json();
       if (data.success) {
         setOrders(data.orders);
@@ -96,7 +99,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [activeOutletId]);
 
   const handleCancelOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +107,7 @@ export default function OrdersPage() {
 
     try {
       setCancelling(true);
-      const res = await fetch(`/api/orders/${cancelOrderModal.id}/cancel`, {
+      const res = await apiFetch(activeOutletId, `/api/orders/${cancelOrderModal.id}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -131,7 +134,7 @@ export default function OrdersPage() {
 
     try {
       setRefunding(true);
-      const res = await fetch(`/api/orders/${refundOrderModal.id}/refund`, {
+      const res = await apiFetch(activeOutletId, `/api/orders/${refundOrderModal.id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -30,8 +30,9 @@ export class AuditService {
           userAgent: input.userAgent,
         },
       });
-    } catch {
-      // Audit log failures should not crash business transactions
+    } catch (error) {
+      if (tx) throw error;
+      // Non-transactional display/login audit failures are non-fatal
       return null;
     }
   }
@@ -50,8 +51,8 @@ export class AuditService {
         where,
         include: { user: { select: { id: true, name: true, email: true, role: true } } },
         orderBy: { createdAt: 'desc' },
-        take: options?.limit || 50,
-        skip: options?.offset || 0,
+        take: Math.max(1, Math.min(200, options?.limit || 50)),
+        skip: Math.max(0, Math.min(100000, options?.offset || 0)),
       }),
     ]);
 

@@ -10,15 +10,21 @@ export interface AuthUserPayload {
   outletId?: string;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'restrocontrol-production-jwt-key-32chars-min-secure-hash';
+function signingKey(): string {
+  const key = process.env.JWT_SECRET;
+  if (!key || key.length < 32 || /your-secure|restrocontrol-production|demo|change.?me/i.test(key)) {
+    throw new Error('Authentication signing key is not configured securely');
+  }
+  return key;
+}
 
 export function signToken(payload: AuthUserPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, signingKey(), { expiresIn: '12h', algorithm: 'HS256' });
 }
 
 export function verifyToken(token: string): AuthUserPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthUserPayload;
+    return jwt.verify(token, signingKey(), { algorithms: ['HS256'] }) as AuthUserPayload;
   } catch {
     return null;
   }

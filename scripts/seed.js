@@ -4,7 +4,8 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding RestroControl production demo database...');
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_SEED !== 'true') throw new Error('Refusing to seed production without ALLOW_DEMO_SEED=true');
+  console.log('Seeding RestroControl demo database...');
 
   // 1. Seed Plans
   const plans = [

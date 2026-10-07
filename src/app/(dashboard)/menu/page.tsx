@@ -360,7 +360,7 @@ export default function MenuPage() {
         isOpen={isItemModalOpen}
         onClose={() => setIsItemModalOpen(false)}
         title="Add New Menu Item"
-        size="lg"
+        maxWidth="lg"
       >
         <form onSubmit={handleAddItem} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

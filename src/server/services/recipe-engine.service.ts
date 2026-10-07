@@ -32,7 +32,7 @@ export class RecipeEngineService {
       where: {
         restaurantId,
         menuItemId,
-        ...(variantId ? { variantId } : {}),
+        variantId: variantId || null,
       },
       include: {
         items: {
@@ -62,7 +62,7 @@ export class RecipeEngineService {
       );
       // Account for waste percentage: e.g. 5% waste -> quantity * 1.05
       const effectiveQty = inStockUnit * (1 + (item.wastePercentage || 0) / 100);
-      const itemCost = effectiveQty * item.ingredient.costPerUnit;
+      const itemCost = effectiveQty * item.ingredient.costPerUnit / (recipe.yieldQuantity > 0 ? recipe.yieldQuantity : 1);
       totalCost += itemCost;
 
       return {

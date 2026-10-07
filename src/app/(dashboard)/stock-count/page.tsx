@@ -1,4 +1,6 @@
 'use client';
+import { useOutlet } from '../layout';
+import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -23,8 +25,8 @@ interface StockCountItem {
   ingredientId: string;
   systemStock: number;
   physicalStock: number;
-  varianceQuantity: number;
-  varianceCost: number;
+  variance: number;
+  varianceValue: number;
   unit: string;
   reason?: string;
   ingredient: {
@@ -37,8 +39,8 @@ interface StockCountItem {
 interface StockCount {
   id: string;
   countNumber: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  totalVarianceCost: number;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  totalVarianceValue: number;
   notes?: string;
   createdAt: string;
   conductedBy?: { name: string };
@@ -55,6 +57,7 @@ interface IngredientMaster {
 }
 
 export default function StockCountPage() {
+  const { activeOutletId } = useOutlet();
   const [counts, setCounts] = useState<StockCount[]>([]);
   const [ingredients, setIngredients] = useState<IngredientMaster[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,11 +75,11 @@ export default function StockCountPage() {
     try {
       setLoading(true);
       const [countRes, ingRes] = await Promise.all([
-        fetch('/api/stock-count').then((r) => r.json()),
-        fetch('/api/ingredients').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/stock-count').then((r) => r.json()),
+        apiFetch(activeOutletId, '/api/ingredients').then((r) => r.json()),
       ]);
 
-      if (countRes.counts) setCounts(countRes.counts);
+      if (countRes.counts) setCounts(countRes.counts.map((c: any) => ({...c, totalVarianceValue: c.items.reduce((sum: number, i: any) => sum + i.varianceValue, 0)})));
       if (ingRes.ingredients) setIngredients(ingRes.ingredients);
     } catch (err) {
       console.error('Failed to load stock audits', err);
@@ -87,7 +90,7 @@ export default function StockCountPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeOutletId]);
 
   const openAuditModal = () => {
     const initial: { [key: string]: { physicalStock: string; reason: string } } = {};
@@ -122,7 +125,7 @@ export default function StockCountPage() {
         reason: val.reason,
       }));
 
-      const res = await fetch('/api/stock-count', {
+      const res = await apiFetch(activeOutletId, '/api/stock-count', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +149,7 @@ export default function StockCountPage() {
 
   const handleApprove = async (id: string, approve: boolean) => {
     try {
-      const res = await fetch(`/api/stock-count/${id}/approve`, {
+      const res = await apiFetch(activeOutletId, `/api/stock-count/${id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approve }),
@@ -163,9 +166,9 @@ export default function StockCountPage() {
 
   const totalVarianceImpact = counts
     .filter((c) => c.status === 'APPROVED')
-    .reduce((sum, c) => sum + (c.totalVarianceCost || 0), 0);
+    .reduce((sum, c) => sum + (c.totalVarianceValue || 0), 0);
 
-  const pendingCount = counts.filter((c) => c.status === 'PENDING').length;
+  const pendingCount = counts.filter((c) => c.status === 'PENDING_APPROVAL').length;
 
   return (
     <div className="space-y-6">
@@ -269,14 +272,14 @@ export default function StockCountPage() {
                       {audit.items?.length || 0}
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold">
-                      <span className={audit.totalVarianceCost < 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                        {formatCurrency(audit.totalVarianceCost)}
+                      <span className={audit.totalVarianceValue < 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                        {formatCurrency(audit.totalVarianceValue)}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
                       {audit.status === 'APPROVED' ? (
                         <Badge variant="success">APPROVED</Badge>
-                      ) : audit.status === 'PENDING' ? (
+                      ) : audit.status === 'PENDING_APPROVAL' ? (
                         <Badge variant="warning">PENDING</Badge>
                       ) : (
                         <Badge variant="danger">REJECTED</Badge>
@@ -290,7 +293,7 @@ export default function StockCountPage() {
                         >
                           <Eye className="w-3.5 h-3.5" /> Breakdown
                         </button>
-                        {audit.status === 'PENDING' && (
+                        {audit.status === 'PENDING_APPROVAL' && (
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleApprove(audit.id, true)}
@@ -323,7 +326,7 @@ export default function StockCountPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Physical Stock Audit & Count Sheet"
-        size="lg"
+        maxWidth="lg"
       >
         <form onSubmit={handleAuditSubmit} className="space-y-4">
           <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200">
@@ -420,7 +423,7 @@ export default function StockCountPage() {
           isOpen={!!selectedAudit}
           onClose={() => setSelectedAudit(null)}
           title={`Audit Breakdown: ${selectedAudit.countNumber}`}
-          size="lg"
+          maxWidth="lg"
         >
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
@@ -434,8 +437,8 @@ export default function StockCountPage() {
               </div>
               <div>
                 <span className="text-slate-400 uppercase font-bold text-[10px]">Net Impact</span>
-                <p className={`font-bold font-mono ${selectedAudit.totalVarianceCost < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {formatCurrency(selectedAudit.totalVarianceCost)}
+                <p className={`font-bold font-mono ${selectedAudit.totalVarianceValue < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {formatCurrency(selectedAudit.totalVarianceValue)}
                 </p>
               </div>
             </div>
@@ -463,13 +466,13 @@ export default function StockCountPage() {
                         {item.physicalStock} {item.unit}
                       </td>
                       <td className="py-2 px-3 text-right font-mono font-bold">
-                        <span className={item.varianceQuantity < 0 ? 'text-rose-600' : item.varianceQuantity > 0 ? 'text-emerald-600' : 'text-slate-400'}>
-                          {item.varianceQuantity > 0 ? `+${item.varianceQuantity}` : item.varianceQuantity} {item.unit}
+                        <span className={item.variance < 0 ? 'text-rose-600' : item.variance > 0 ? 'text-emerald-600' : 'text-slate-400'}>
+                          {item.variance > 0 ? `+${item.variance}` : item.variance} {item.unit}
                         </span>
                       </td>
                       <td className="py-2 px-3 text-right font-mono font-bold">
-                        <span className={item.varianceCost < 0 ? 'text-rose-600' : item.varianceCost > 0 ? 'text-emerald-600' : 'text-slate-400'}>
-                          {formatCurrency(item.varianceCost)}
+                        <span className={item.varianceValue < 0 ? 'text-rose-600' : item.varianceValue > 0 ? 'text-emerald-600' : 'text-slate-400'}>
+                          {formatCurrency(item.varianceValue)}
                         </span>
                       </td>
                       <td className="py-2 px-3 text-slate-500">{item.reason || '—'}</td>

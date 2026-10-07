@@ -1,5 +1,7 @@
 'use client';
+import { apiFetch } from '@/lib/api-fetch';
 
+import { Scale } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useOutlet } from '../layout';
 import {
@@ -75,7 +77,7 @@ export default function PosPage() {
     if (!activeOutletId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/pos/catalog?outletId=${activeOutletId}`);
+      const res = await apiFetch(activeOutletId, `/api/pos/catalog?outletId=${activeOutletId}`);
       const data = await res.json();
       if (data.success) {
         setCategories(data.catalog.categories || []);
@@ -98,7 +100,7 @@ export default function PosPage() {
   const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountAmount = Math.round(((subtotal * discountPercent) / 100) * 100) / 100;
   const taxable = subtotal - discountAmount;
-  const taxAmount = Math.round(taxable * 0.05 * 100) / 100; // 5% GST
+  const taxAmount = Math.round(cart.reduce((sum, c) => {const menu = items.find((m: any) => m.id === c.menuItemId); return sum + c.totalPrice * (menu?.taxRate ?? 5) / 100;}, 0) * (subtotal ? taxable / subtotal : 0) * 100) / 100;
   const deliveryFee = orderType === 'DELIVERY' ? 40 : 0;
   const grandTotal = Math.max(0, Math.round((taxable + taxAmount + deliveryFee) * 100) / 100);
 
@@ -217,9 +219,9 @@ export default function PosPage() {
       // Generate client idempotency key to prevent double deduction
       const idempotencyKey = `POS-${activeOutletId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      const res = await fetch('/api/pos/checkout', {
+      const res = await apiFetch(activeOutletId, '/api/pos/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-outlet-id': activeOutletId },
         body: JSON.stringify({
           outletId: activeOutletId,
           orderType,

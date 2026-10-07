@@ -6,7 +6,8 @@ class CacheService {
 
   constructor() {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+      const redisUrl = process.env.REDIS_URL;
+      if (!redisUrl) return;
       this.client = new Redis(redisUrl, {
         maxRetriesPerRequest: 1,
         retryStrategy: () => null, // don't hang if disconnected

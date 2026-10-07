@@ -1,8 +1,11 @@
+import { protectRead } from '@/server/services/api-validation';
+import { hasPermission } from '@/server/auth/permissions';
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { StockCountService } from '@/server/services/stock-count.service';
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:stock_count');
   if (errorResponse || !auth) return errorResponse;
 
@@ -10,7 +13,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, counts });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:stock_count');
   if (errorResponse || !auth) return errorResponse;
 
@@ -22,7 +25,7 @@ export async function POST(req: NextRequest) {
       conductedByUserId: auth.user.userId,
       items: data.items,
       notes: data.notes,
-      autoApprove: !!data.autoApprove,
+      autoApprove: !!data.autoApprove && hasPermission(auth.user.role, 'approve:stock_count'),
     });
 
     return NextResponse.json({ success: true, ...result });
@@ -33,3 +36,9 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
+
+export const GET = protectRead(handleGET);

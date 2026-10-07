@@ -10,6 +10,7 @@ export class KotService {
       where: {
         restaurantId,
         outletId,
+        order: {status: {notIn: ['CANCELLED', 'REFUNDED']}},
         status: {
           not: KotStatus.SERVED,
         },
@@ -53,6 +54,7 @@ export class KotService {
       throw new Error('KOT ticket not found or tenant mismatch');
     }
 
+    if (!Object.values(KotStatus).includes(newStatus) || ['CANCELLED','REFUNDED'].includes(kot.order.status)) throw new Error('Invalid KOT transition');
     const updatedKot = await prisma.kitchenOrder.update({
       where: { id: kotId },
       data: { status: newStatus },

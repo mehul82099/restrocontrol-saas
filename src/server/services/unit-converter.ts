@@ -67,15 +67,8 @@ export class UnitConverter {
       return inPcs / COUNT_TO_PCS[to];
     }
 
-    // Handle liquid kitchen assumption: 1L = 1KG / 1ML = 1G if explicitly mixed
-    if ((from in VOLUME_TO_L && to in WEIGHT_TO_KG) || (from in WEIGHT_TO_KG && to in VOLUME_TO_L)) {
-      const baseVal = from in WEIGHT_TO_KG ? quantity * WEIGHT_TO_KG[from] : quantity * VOLUME_TO_L[from];
-      const targetFactor = to in WEIGHT_TO_KG ? WEIGHT_TO_KG[to] : VOLUME_TO_L[to];
-      return baseVal / targetFactor;
-    }
-
     // Fallback: return quantity unchanged if custom custom unit matches or unknown
-    return quantity;
+    throw new Error(`Incompatible units: ${from} to ${to}`);
   }
 
   /**

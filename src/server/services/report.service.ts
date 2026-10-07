@@ -14,7 +14,7 @@ export class ReportService {
     filterString = '7days',
     customStart?: string,
     customEnd?: string
-  ) {
+  ): Promise<{title: string; headers: string[]; rows: any[]}> {
     const dateRange = AnalyticsService.parseDateFilter(filterString, customStart, customEnd);
     const { startDate, endDate } = dateRange;
 
@@ -200,8 +200,47 @@ export class ReportService {
         return { title: 'Purchase Orders Report', headers: Object.keys(rows[0] || {}), rows };
       }
 
+      case 'category_sales': {
+        const items = await prisma.orderItem.findMany({where: {order: {restaurantId, outletId, createdAt: {gte: startDate, lte: endDate}, status: {notIn: ['CANCELLED','REFUNDED']}}}, include: {menuItem: {include: {category: true}}}});
+        const groups = new Map<string, any>();
+        for (const item of items) {const name = item.menuItem.category.name; const g = groups.get(name) || {Category: name, Quantity: 0, Revenue: 0}; g.Quantity += item.quantity; g.Revenue += item.totalPrice; groups.set(name,g);}
+        const rows = [...groups.values()]; return {title: 'Category Sales', headers: ['Category','Quantity','Revenue'], rows};
+      }
+      case 'payment': {
+        const payments = await prisma.payment.groupBy({by: ['paymentMethod','status'], where: {restaurantId, outletId, createdAt: {gte: startDate, lte: endDate}}, _sum: {amount: true}, _count: true});
+        const rows = payments.map(p => ({Method: p.paymentMethod, Status: p.status, Count: p._count, Amount: p._sum.amount || 0})); return {title: 'Payment Breakdown', headers: ['Method','Status','Count','Amount'], rows};
+      }
+      case 'discount':
+      case 'cancellation': {
+        const orders = await prisma.order.findMany({where: {restaurantId, outletId, createdAt: {gte: startDate, lte: endDate}, ...(reportType === 'discount' ? {discountAmount: {gt: 0}} : {status: {in: ['CANCELLED','REFUNDED']}})}, orderBy: {createdAt: 'desc'}});
+        const rows = orders.map(o => ({Order: o.orderNumber, Status: o.status, Discount: o.discountAmount, Total: o.totalAmount, Reason: reportType === 'discount' ? o.discountReason || '' : o.cancellationReason || o.notes || ''})); return {title: reportType === 'discount' ? 'Discounts' : 'Cancellations and Refunds', headers: ['Order','Status','Discount','Total','Reason'], rows};
+      }
+      case 'consumption': return this.generateReport('inventory_variance', restaurantId, outletId, filterString, customStart, customEnd);
+      case 'recipe_costing':
+      case 'item_margin': return this.generateReport('food_cost', restaurantId, outletId, filterString, customStart, customEnd);
+      case 'stock_adjustments': {
+        const movements = await prisma.inventoryMovement.findMany({where: {restaurantId,outletId,createdAt:{gte:startDate,lte:endDate},movementType:{in:['ADJUSTMENT','STOCK_COUNT']}},include:{ingredient:true},orderBy:{createdAt:'desc'}});
+        const rows=movements.map(m=>({Date:m.createdAt.toISOString(),Ingredient:m.ingredient.name,Quantity:m.quantity,Unit:m.unit,Value:m.totalCost,Reason:m.reason||''}));return {title:'Stock Adjustments',headers:['Date','Ingredient','Quantity','Unit','Value','Reason'],rows};
+      }
+      case 'low_stock': {
+        const stock=await InventoryService.getOutletStock(restaurantId,outletId);
+        const rows=stock.filter(s=>s.currentStock<=s.reorderLevel).map(s=>({Ingredient:s.name,Stock:s.currentStock,Unit:s.unit,Minimum:s.minimumStock,Reorder:s.reorderLevel,Status:s.status}));return {title:'Low Stock',headers:['Ingredient','Stock','Unit','Minimum','Reorder','Status'],rows};
+      }
+      case 'physical_stock': {
+        const counts=await prisma.stockCount.findMany({where:{restaurantId,outletId,createdAt:{gte:startDate,lte:endDate}},include:{items:{include:{ingredient:true}}},orderBy:{createdAt:'desc'}});
+        const rows=counts.flatMap(c=>c.items.map(i=>({Count:c.countNumber,Status:c.status,Ingredient:i.ingredient.name,System:i.systemStock,Physical:i.physicalStock,Variance:i.variance,Value:i.varianceValue})));return {title:'Physical Stock Audits',headers:['Count','Status','Ingredient','System','Physical','Variance','Value'],rows};
+      }
+      case 'supplier': {
+        const purchases=await prisma.purchaseOrder.findMany({where:{restaurantId,outletId,createdAt:{gte:startDate,lte:endDate},status:{not:'CANCELLED'}},include:{supplier:true}});
+        const groups=new Map<string,any>();for(const p of purchases){const g=groups.get(p.supplierId)||{Supplier:p.supplier.name,Orders:0,Amount:0};g.Orders++;g.Amount+=p.totalAmount;groups.set(p.supplierId,g);}return {title:'Supplier Procurement',headers:['Supplier','Orders','Amount'],rows:[...groups.values()]};
+      }
+      case 'purchase_price_history': {
+        const movements=await prisma.inventoryMovement.findMany({where:{restaurantId,outletId,createdAt:{gte:startDate,lte:endDate},movementType:'PURCHASE'},include:{ingredient:true},orderBy:{createdAt:'desc'}});
+        const rows=movements.map(m=>({Date:m.createdAt.toISOString(),Ingredient:m.ingredient.name,Quantity:m.quantity,Unit:m.unit,Price:m.costPerUnit,Total:m.totalCost}));return {title:'Purchase Price History',headers:['Date','Ingredient','Quantity','Unit','Price','Total'],rows};
+      }
+
       default: {
-        return { title: 'Report', headers: [], rows: [] };
+        throw new Error('This report is not implemented.');
       }
     }
   }
@@ -215,7 +254,8 @@ export class ReportService {
     const dataLines = rows.map((row) =>
       headers
         .map((h) => {
-          const val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '';
+          let val = row[h] !== undefined && row[h] !== null ? String(row[h]) : '';
+          if (/^[\s]*[=+@-]/.test(val) && typeof row[h] !== 'number') val = "'" + val;
           return `"${val.replace(/"/g, '""')}"`;
         })
         .join(',')

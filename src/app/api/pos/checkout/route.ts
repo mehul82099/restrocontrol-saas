@@ -1,9 +1,10 @@
+import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { OrderService, CreateOrderInput } from '@/server/services/order.service';
 import { SubscriptionService } from '@/server/services/subscription.service';
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'access:pos');
   if (errorResponse || !auth) return errorResponse;
 
@@ -33,3 +34,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = protectMutation(handlePOST);
+
+export const dynamic = 'force-dynamic';
