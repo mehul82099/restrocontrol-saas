@@ -105,12 +105,18 @@ export default function DashboardLayout({
             </div>
           )}
           <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-slate-50/70">
-            {trial?.expired ? (
+            {trial?.expired && pathname !== '/plans' ? (
               <div className="max-w-lg mx-auto mt-10 sm:mt-20 bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center shadow-sm">
                 <h2 className="text-xl font-black text-slate-900">Your 14-day free trial has ended</h2>
                 <p className="text-sm text-slate-600 mt-3">
-                  Access to {user?.restaurantName || 'your restaurant'} is paused. Your data is kept safe. Contact us to choose a plan and continue.
+                  Access to {user?.restaurantName || 'your restaurant'} is paused. Your data is kept safe. Pick a plan to continue.
                 </p>
+                <button
+                  onClick={() => router.push('/plans')}
+                  className="mt-6 mr-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-500"
+                >
+                  View plan (₹499/month)
+                </button>
                 <button
                   onClick={async () => {
                     await fetch('/api/auth/logout', { method: 'POST' });
