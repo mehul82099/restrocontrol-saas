@@ -2,6 +2,7 @@ import { protectRead } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
+import { getTrialInfo } from '@/server/services/trial.service';
 
 async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
@@ -24,10 +25,12 @@ async function handleGET(req: NextRequest) {
     orderBy: { isDefault: 'desc' },
   });
 
+  const subscription = await prisma.subscription.findUnique({ where: { restaurantId: auth.restaurantId }, select: { status: true, currentPeriodEnd: true } });
   const activeOutlet = outlets.find((o) => o.id === auth.outletId) || outlets[0];
 
   return NextResponse.json({
     success: true,
+    trial: getTrialInfo(subscription),
     user: {
       id: user.id,
       email: user.email,
