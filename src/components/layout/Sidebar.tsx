@@ -86,7 +86,7 @@ export function Sidebar({ userRole = 'OWNER', open = false, onClose = () => {} }
       items: [
         { name: 'Team & Permissions', href: '/users', icon: Users, roles: ['OWNER', 'MANAGER'] },
         { name: 'Outlets', href: '/outlets', icon: Building2, roles: ['OWNER'] },
-        { name: 'SaaS Plan', href: '/subscriptions', icon: CreditCard, roles: ['OWNER'] },
+        { name: 'SaaS Plan', href: '/plans', icon: CreditCard, roles: ['OWNER'] },
         { name: 'Security Audit Trail', href: '/audit-logs', icon: ShieldAlert, roles: ['OWNER'] },
         { name: 'Settings', href: '/settings', icon: Settings, roles: ['OWNER', 'MANAGER'] },
       ],
