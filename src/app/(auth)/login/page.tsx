@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Scale, Lock, Mail, ArrowRight, ShieldCheck, CheckCircle } from 'lucide-react';
 
@@ -126,6 +127,11 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        <p className="text-xs text-slate-400 text-center mt-5">
+          New restaurant?{' '}
+          <Link href="/signup" className="text-emerald-400 font-bold hover:underline">Start a 14-day free trial</Link>
+        </p>
 
         {/* 1-Click Demo Accounts */}
         <div className="mt-8 pt-6 border-t border-slate-800">

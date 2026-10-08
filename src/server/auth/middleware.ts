@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, AuthUserPayload } from './jwt';
 import { hasPermission, Permission } from './permissions';
 import { prisma } from '../db/prisma';
+import { getTrialInfo, isTrialExemptPath } from '../services/trial.service';
 
 export interface AuthenticatedContext {
   user: AuthUserPayload;
@@ -22,6 +23,11 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   // Reload authority on every request: disabled users and role changes take effect immediately.
   const user = await prisma.user.findFirst({where: {id: payload.userId, restaurantId: payload.restaurantId, isActive: true}, include: {userOutlets: true}});
   if (!user) return reject(401, 'Invalid or expired authentication.');
+  // Free-trial expiry: only TRIALING subscriptions are blocked. Other accounts are unaffected.
+  const subscription = await prisma.subscription.findUnique({where: {restaurantId: user.restaurantId}, select: {status: true, currentPeriodEnd: true}});
+  if (getTrialInfo(subscription).expired && !isTrialExemptPath(new URL(req.url).pathname, req.method)) {
+    return {errorResponse: NextResponse.json({success: false, code: 'TRIAL_EXPIRED', error: 'Your 14-day free trial has ended.'}, {status: 402})};
+  }
   if (requiredPermission && !hasPermission(user.role, requiredPermission)) return reject(403, 'Permission denied.');
   const canUseAllOutlets = user.role === 'OWNER';
   const outlets = await prisma.outlet.findMany({where: {restaurantId: user.restaurantId, isActive: true, ...(canUseAllOutlets ? {} : {userOutlets: {some: {userId: user.id}}})}, orderBy: {isDefault: 'desc'}});

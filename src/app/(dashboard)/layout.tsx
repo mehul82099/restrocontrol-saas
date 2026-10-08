@@ -29,6 +29,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
+  const [trial, setTrial] = useState<any>(null);
   const [activeOutletId, setActiveOutletId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -47,6 +48,7 @@ export default function DashboardLayout({
       const data = await res.json();
       if (data.success) {
         setUser(data.user);
+        setTrial(data.trial || null);
         if (!activeOutletId) {
           setActiveOutletId(data.user.activeOutletId || data.user.outlets?.[0]?.id || '');
         }
@@ -97,8 +99,31 @@ export default function DashboardLayout({
             onOutletChange={setActiveOutletId}
             onMenuClick={() => setSidebarOpen(true)}
           />
+          {trial?.isTrial && !trial.expired && (
+            <div className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-6 py-2 text-center">
+              Free trial: {trial.daysRemaining} {trial.daysRemaining === 1 ? 'day' : 'days'} remaining
+            </div>
+          )}
           <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-slate-50/70">
-            {children}
+            {trial?.expired ? (
+              <div className="max-w-lg mx-auto mt-10 sm:mt-20 bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center shadow-sm">
+                <h2 className="text-xl font-black text-slate-900">Your 14-day free trial has ended</h2>
+                <p className="text-sm text-slate-600 mt-3">
+                  Access to {user?.restaurantName || 'your restaurant'} is paused. Your data is kept safe. Contact us to choose a plan and continue.
+                </p>
+                <button
+                  onClick={async () => {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    router.push('/login');
+                  }}
+                  className="mt-6 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>
