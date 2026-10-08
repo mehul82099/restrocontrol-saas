@@ -27,5 +27,6 @@ export function trialEndDate(from = new Date()): Date {
 // Routes that must keep working after the trial ends so the owner can see the notice and sign out.
 export function isTrialExemptPath(pathname: string, method: string): boolean {
   if (pathname === '/api/auth/me' || pathname === '/api/auth/logout') return true;
+  if (pathname === '/api/plans/request' && method === 'POST') return true;
   return pathname === '/api/subscriptions' && method === 'GET';
 }
