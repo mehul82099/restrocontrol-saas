@@ -141,6 +141,7 @@ model Restaurant {
   notifications       Notification[]
   auditLogs           AuditLog[]
   subscription        Subscription?
+  attendanceSessions AttendanceSession[]
 
   @@index([slug])
 }
@@ -192,6 +193,7 @@ model User {
   userOutlets UserOutlet[]
   orders      Order[]
   auditLogs   AuditLog[]
+  attendanceSessions AttendanceSession[]
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -809,4 +811,22 @@ model AuditLog {
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([restaurantId, action, createdAt])
+}
+
+// One attendance record per staff login session, not a verified physical shift.
+model AttendanceSession {
+  id String @id @default(uuid())
+  restaurantId String
+  userId String
+  staffName String
+  staffRole String
+  outletId String?
+  checkedInAt DateTime @default(now())
+  expiresAt DateTime
+  checkedOutAt DateTime?
+  checkoutReason String?
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([restaurantId, checkedInAt, id])
+  @@index([userId, expiresAt])
 }
