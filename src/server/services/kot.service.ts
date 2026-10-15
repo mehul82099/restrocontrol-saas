@@ -79,7 +79,7 @@ export class KotService {
     }
 
     await cache.invalidatePattern(`dashboard:${restaurantId}:${kot.outletId}:*`).catch(() => {});
-    await notifyOrderStaff(restaurantId, kot.outletId);
+    await notifyOrderStaff(restaurantId, kot.outletId, newStatus === KotStatus.READY && kot.status !== KotStatus.READY ? 'ready' : 'activity');
     return updatedKot;
   }
 }
