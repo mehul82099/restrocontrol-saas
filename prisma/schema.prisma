@@ -141,6 +141,7 @@ model Restaurant {
   notifications       Notification[]
   auditLogs           AuditLog[]
   subscription        Subscription?
+  refundRequests      RefundRequest[]
 
   @@index([slug])
 }
@@ -810,4 +811,25 @@ model AuditLog {
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([restaurantId, action, createdAt])
+}
+
+// Operational intake only. No payment/refund execution fields or money movement.
+model RefundRequest {
+  id               String   @id @default(uuid())
+  restaurantId     String
+  submittedById    String
+  restaurantName   String
+  email            String
+  paymentReference String
+  refundReason     String
+  serviceFeedback  String
+  status           String   @default("SUBMITTED")
+  submittedAt      DateTime @default(now())
+  refundDueAt      DateTime
+  reviewedAt       DateTime?
+  reviewedById     String?
+  restaurant       Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, paymentReference])
+  @@index([status, submittedAt])
 }
