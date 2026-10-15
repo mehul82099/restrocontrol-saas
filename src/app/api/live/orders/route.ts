@@ -10,6 +10,10 @@ export const GET = protectRead(async (req: NextRequest) => {
   if (!auth || errorResponse) return errorResponse;
   if (!orderAudience(auth.user.role)) return NextResponse.json({success: false}, {status: 403});
   const where = {restaurantId: auth.restaurantId, outletId: auth.outletId};
+  if (auth.user.role === 'WAITER') {
+    const ready = await prisma.kitchenOrder.aggregate({where: {...where, status: 'READY', order: {status: {notIn: ['CANCELLED', 'REFUNDED']}}}, _count: true, _max: {updatedAt: true}});
+    return NextResponse.json({success: true, revision: createHash('sha256').update(JSON.stringify(ready)).digest('hex')}, {headers: {'Cache-Control': 'private, no-store'}});
+  }
   const [orders, kitchen] = await Promise.all([
     prisma.order.groupBy({by: ['status', 'paymentStatus'], where, _count: true, _max: {updatedAt: true}}),
     prisma.kitchenOrder.groupBy({by: ['status'], where, _count: true, _max: {updatedAt: true}}),
