@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
-import { signToken } from '@/server/auth/jwt';
+import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { AuditService } from '@/server/services/audit.service';
 
 export async function POST(req: NextRequest) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         where: { restaurantId: user.restaurantId, isDefault: true },
       }));
 
-    const token = signToken({
+    const token = await issueAttendanceToken({
       userId: user.id,
       restaurantId: user.restaurantId,
       role: user.role,
