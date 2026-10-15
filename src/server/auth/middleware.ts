@@ -20,6 +20,13 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies.get('token')?.value;
   const payload = token ? verifyToken(token) : null;
   if (!payload?.userId || !payload.restaurantId) return reject(401, 'Invalid or expired authentication.');
+  if (payload.attendanceSessionId) {
+    const session = await prisma.attendanceSession.findFirst({where: {
+      id: payload.attendanceSessionId, userId: payload.userId, restaurantId: payload.restaurantId,
+      checkedOutAt: null, expiresAt: {gt: new Date()},
+    }});
+    if (!session) return reject(401, 'This login session has ended.');
+  }
   // Reload authority on every request: disabled users and role changes take effect immediately.
   const user = await prisma.user.findFirst({where: {id: payload.userId, restaurantId: payload.restaurantId, isActive: true}, include: {userOutlets: true}});
   if (!user) return reject(401, 'Invalid or expired authentication.');

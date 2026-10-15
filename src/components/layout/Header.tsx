@@ -66,10 +66,11 @@ export function Header({ user, activeOutletId, onOutletChange, onMenuClick }: He
 
   const handleLogout = async () => {
     try {
-      await apiFetch(activeOutletId, '/api/auth/logout', { method: 'POST' });
+      const result = await apiFetch(activeOutletId, '/api/auth/logout', { method: 'POST' });
+      if (!result.ok) throw new Error('Logout failed');
       router.push('/login');
     } catch {
-      router.push('/login');
+      alert('Check-out could not be recorded. Please retry Logout.');
     }
   };
 

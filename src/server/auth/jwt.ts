@@ -8,6 +8,7 @@ export interface AuthUserPayload {
   email: string;
   name: string;
   outletId?: string;
+  attendanceSessionId?: string;
 }
 
 function signingKey(): string {

@@ -84,6 +84,7 @@ export function Sidebar({ userRole = 'OWNER', open = false, onClose = () => {} }
     {
       title: 'ADMIN & SAAS',
       items: [
+        { name: 'Staff Attendance', href: '/attendance', icon: ClipboardCheck, roles: ['OWNER', 'MANAGER'] },
         { name: 'Team & Permissions', href: '/users', icon: Users, roles: ['OWNER', 'MANAGER'] },
         { name: 'Outlets', href: '/outlets', icon: Building2, roles: ['OWNER'] },
         { name: 'SaaS Plan', href: '/plans', icon: CreditCard, roles: ['OWNER'] },
