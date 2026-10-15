@@ -8,7 +8,7 @@ const pages: Record<string, { title: string; intro: string; sections: { title: s
   pricing: { title: 'Plans for your restaurant.', intro: 'Start with a 14-day free trial. Choose website access now, with app access coming later.', sections: [
     { title: 'Restaurant-management tools', text: 'POS, orders, kitchen display, recipe costing, inventory ledger, stock variance, wastage, purchases, stock audits, reports and staff roles.' },
     { title: '14-day free trial', text: 'New restaurant signups start with a 14-day trial. No card is requested at signup. When the trial ends, access is paused until the restaurant is activated on a paid plan.' },
-    { title: 'Payment and renewal', text: 'Online subscription checkout is not enabled by this preview. Renewal method, any applicable tax treatment and the final amount payable must be confirmed before paid checkout launches. No payment is collected on this page.' },
+    { title: 'Payment and renewal', text: 'Online subscription checkout is not enabled by this preview. Prices are per month. Automatic renewal is planned but not active. Any applicable tax treatment and the final amount payable must be confirmed before paid checkout launches. No payment is collected on this page.' },
   ] },
   about: { title: 'About RestroControl', intro: 'Restaurant operations, from the counter to the kitchen.', sections: [
     { title: 'What we build', text: 'RestroControl is restaurant-management software from Mystify me. It brings POS, orders, recipe costing, stock tracking, purchases and reports into one application.' },
@@ -21,7 +21,7 @@ const pages: Record<string, { title: string; intro: string; sections: { title: s
   terms: { title: 'Terms of service', intro: 'Draft terms for the RestroControl restaurant-management service. Not yet effective.', sections: [
     { title: 'Service and accounts', text: 'RestroControl provides restaurant-management tools, including POS, inventory and reporting. Use an account you are authorised to manage. Keep login details private and provide accurate account information.' },
     { title: 'Responsible use', text: 'Use the service lawfully. Do not attempt to access another restaurant’s data, bypass access controls, interfere with the service or upload unlawful material. Restaurant owners are responsible for the information they enter and the access they give their staff.' },
-    { title: 'Trial and pricing', text: 'Four plans are shown on the pricing page: ₹499 for one outlet, ₹699 for two or more outlets, and upcoming app + website plans at ₹699 and ₹999. Billing frequency, usage limits, upgrade rules, tax treatment and cancellation terms must be finalised before paid checkout is enabled.' },
+    { title: 'Trial and pricing', text: 'Four plans are shown on the pricing page: ₹499 for one outlet, ₹699 for two or more outlets, and upcoming app + website plans at ₹699 and ₹999. Prices are per month. Usage limits, upgrade rules, tax treatment and cancellation terms must be finalised before paid checkout is enabled.' },
     { title: 'Business records', text: 'Review bills, inventory entries and reports before relying on them for accounting or business decisions. The software does not replace professional accounting or legal advice.' },
     { title: 'Terms still requiring approval', text: 'Cancellation effects, refund eligibility and timing, data retention and deletion, service suspension, liability terms, dispute handling and an effective date need owner review. No uptime, backup, security or compliance guarantee is made by this preview.' },
   ] },
