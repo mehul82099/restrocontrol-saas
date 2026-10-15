@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { SUBSCRIPTION_PLANS } from '@/lib/subscription-plans';
 
-export default function PlanCards({ canRequest = false, currentCode }: { canRequest?: boolean; currentCode?: string }) {
+export default function PlanCards({ canRequest = false, currentCode, account = false }: { canRequest?: boolean; currentCode?: string; account?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   async function request(planCode: string) {
@@ -28,6 +28,7 @@ export default function PlanCards({ canRequest = false, currentCode }: { canRequ
         {plan.upcoming ? <button disabled className="mt-5 w-full rounded-xl bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500">Upcoming - not active</button>
           : currentCode === plan.code ? <button disabled className="mt-5 w-full rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">Current plan</button>
           : canRequest ? <button onClick={() => request(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Saving request...' : currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI' ? 'Request upgrade to ₹699' : 'Request this plan'}</button>
+          : account ? <button disabled className="mt-5 w-full rounded-xl bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500">Only the owner can request a plan</button>
           : <Link href="/signup" className="mt-5 rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white">Start 14-day free trial</Link>}
       </section>)}
     </div>
