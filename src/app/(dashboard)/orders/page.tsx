@@ -1,8 +1,9 @@
 'use client';
 import { useOutlet } from '../layout';
+import { useOrderUpdates } from '@/lib/use-order-updates';
 import { apiFetch } from '@/lib/api-fetch';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Receipt,
   Search,
@@ -64,6 +65,8 @@ interface Order {
 
 export default function OrdersPage() {
   const { activeOutletId } = useOutlet();
+  const outletRef = useRef(activeOutletId); outletRef.current = activeOutletId;
+  const requestSeq = useRef(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -82,22 +85,26 @@ export default function OrdersPage() {
   const [refundReason, setRefundReason] = useState('Quality dissatisfaction');
   const [refunding, setRefunding] = useState(false);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (quiet = false) => {
+    const seq = ++requestSeq.current;
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       const res = await apiFetch(activeOutletId, '/api/orders');
       const data = await res.json();
+      if (outletRef.current !== activeOutletId || seq !== requestSeq.current) return;
       if (data.success) {
         setOrders(data.orders);
       }
     } catch (err) {
       console.error('Failed to load orders', err);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   };
 
+  useOrderUpdates(activeOutletId, () => { void fetchOrders(true); });
   useEffect(() => {
+    setOrders([]);
     fetchOrders();
   }, [activeOutletId]);
 
@@ -589,4 +596,4 @@ export default function OrdersPage() {
       )}
     </div>
   );
-}
+          }

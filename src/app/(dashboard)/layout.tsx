@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import dynamic from 'next/dynamic';
+import { StaffOrderUpdates } from '@/components/live/StaffOrderUpdates';
 
 const Landing = dynamic(() => import('@/components/world/Landing'));
 
@@ -53,10 +54,13 @@ export default function DashboardLayout({
       }
       const data = await res.json();
       if (data.success) {
+        if (data.user.role === 'WAITER' && pathname !== '/waiter') router.replace('/waiter');
         setUser(data.user);
         setTrial(data.trial || null);
         if (!activeOutletId) {
-          setActiveOutletId(data.user.activeOutletId || data.user.outlets?.[0]?.id || '');
+          const requestedOutlet = new URLSearchParams(window.location.search).get('outletId');
+          const linkedOutlet = data.user.outlets?.find((outlet: any) => outlet.id === requestedOutlet);
+          setActiveOutletId(linkedOutlet?.id || data.user.activeOutletId || data.user.outlets?.[0]?.id || '');
         }
       } else {
         router.push('/login');
@@ -107,6 +111,7 @@ export default function DashboardLayout({
             onOutletChange={setActiveOutletId}
             onMenuClick={() => setSidebarOpen(true)}
           />
+          <StaffOrderUpdates user={user} outletId={activeOutletId} />
           {trial?.isTrial && !trial.expired && (
             <div className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-6 py-2 text-center">
               Free trial: {trial.daysRemaining} {trial.daysRemaining === 1 ? 'day' : 'days'} remaining
@@ -123,7 +128,7 @@ export default function DashboardLayout({
                   onClick={() => router.push('/plans')}
                   className="mt-6 mr-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-500"
                 >
-                  View plan (₹499/month)
+                  View plans
                 </button>
                 <button
                   onClick={async () => {
