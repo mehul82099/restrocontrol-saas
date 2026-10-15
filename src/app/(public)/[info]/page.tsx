@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import PlanCards from '@/components/billing/PlanCards';
 import SiteFooter, { publicLinks } from '@/components/public/SiteFooter';
 
 const pages: Record<string, { title: string; intro: string; sections: { title: string; text: string }[] }> = {
-  pricing: { title: 'One restaurant. One simple plan.', intro: '14 days to try RestroControl, then ₹499 per month per restaurant.', sections: [
-    { title: 'Everything in one plan', text: 'POS, orders, kitchen display, recipe costing, inventory ledger, stock variance, wastage, purchases, stock audits, reports and staff roles.' },
+  pricing: { title: 'Plans for your restaurant.', intro: 'Start with a 14-day free trial. Choose website access now, with app access coming later.', sections: [
+    { title: 'Restaurant-management tools', text: 'POS, orders, kitchen display, recipe costing, inventory ledger, stock variance, wastage, purchases, stock audits, reports and staff roles.' },
     { title: '14-day free trial', text: 'New restaurant signups start with a 14-day trial. No card is requested at signup. When the trial ends, access is paused until the restaurant is activated on a paid plan.' },
     { title: 'Payment and renewal', text: 'Online subscription checkout is not enabled by this preview. Renewal method, any applicable tax treatment and the final amount payable must be confirmed before paid checkout launches. No payment is collected on this page.' },
   ] },
@@ -20,7 +21,7 @@ const pages: Record<string, { title: string; intro: string; sections: { title: s
   terms: { title: 'Terms of service', intro: 'Draft terms for the RestroControl restaurant-management service. Not yet effective.', sections: [
     { title: 'Service and accounts', text: 'RestroControl provides restaurant-management tools, including POS, inventory and reporting. Use an account you are authorised to manage. Keep login details private and provide accurate account information.' },
     { title: 'Responsible use', text: 'Use the service lawfully. Do not attempt to access another restaurant’s data, bypass access controls, interfere with the service or upload unlawful material. Restaurant owners are responsible for the information they enter and the access they give their staff.' },
-    { title: 'Trial and pricing', text: 'The plan is ₹499 per month per restaurant after a 14-day free trial. Online payment, renewal, tax treatment and cancellation terms must be finalised before paid checkout is enabled.' },
+    { title: 'Trial and pricing', text: 'Four plans are shown on the pricing page: ₹499 for one outlet, ₹699 for two or more outlets, and upcoming app + website plans at ₹699 and ₹999. Billing frequency, usage limits, upgrade rules, tax treatment and cancellation terms must be finalised before paid checkout is enabled.' },
     { title: 'Business records', text: 'Review bills, inventory entries and reports before relying on them for accounting or business decisions. The software does not replace professional accounting or legal advice.' },
     { title: 'Terms still requiring approval', text: 'Cancellation effects, refund eligibility and timing, data retention and deletion, service suspension, liability terms, dispute handling and an effective date need owner review. No uptime, backup, security or compliance guarantee is made by this preview.' },
   ] },
@@ -70,7 +71,7 @@ export default async function PublicInfoPage({ params }: { params: Promise<{ inf
             <p className="text-xs font-bold uppercase tracking-[.16em] text-emerald-700">Mystify me / RestroControl</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight text-stone-900 sm:text-5xl">{page.title}</h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-stone-600">{page.intro}</p>
-            {info === 'pricing' && <div className="mt-7 rounded-3xl border border-emerald-200 bg-white p-6 sm:p-8"><p className="text-sm font-bold text-emerald-700">ALL-INCLUSIVE PLAN</p><p className="mt-2 text-5xl font-black text-stone-900">₹499<span className="text-base font-medium text-stone-500"> / month</span></p><p className="mt-2 text-stone-600">Per restaurant, after your 14-day free trial.</p><Link href="/signup" className="mt-5 inline-block rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white">Start free trial</Link></div>}
+            {info === 'pricing' && <PlanCards />}
             <div className="mt-8 space-y-7">{page.sections.map(section => <section key={section.title}><h2 className="text-xl font-bold text-stone-900">{section.title}</h2><p className="mt-2 leading-7 text-stone-600">{section.text}</p></section>)}</div>
             <section className="mt-10 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
               <h2 className="text-lg font-bold">Mystify me</h2>
