@@ -33,6 +33,6 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
       </section>)}
     </div>
     {message && <p role="status" className="mt-5 rounded-xl border border-stone-200 bg-white p-4 text-sm leading-6 text-stone-700">{message}</p>}
-    <p className="mt-5 text-sm leading-6 text-stone-600">You can request a move from the ₹499 website plan to the ₹699 website plan from your account. A request does not change your access, price or renewal mandate. Final upgrade billing rules must be approved before payments launch.</p>
+    <p className="mt-5 text-sm leading-6 text-stone-600">You can request a move from the ₹499 website plan to the ₹699 website plan from your account. A request does not change your access, price or renewal mandate. The ₹499 to ₹699 upgrade takes effect at the next renewal, with no immediate charge or proration.</p>
   </div>;
 }
