@@ -1,8 +1,19 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api-fetch';
 
 export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string}) {
+  const latestOutlet = useRef(outletId); latestOutlet.current = outletId;
+  const saveQueue = useRef<Promise<any>>(Promise.resolve());
+  const saveSubscription = (subscription: PushSubscription) => {
+    // Serialize outlet rebinding so a slow older request cannot overwrite the latest selection.
+    const task = saveQueue.current.catch(() => {}).then(async () => {
+      const response = await apiFetch(latestOutlet.current, '/api/push/subscription', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(subscription)});
+      if (!response.ok) throw new Error('Could not enable alerts. Try again.');
+    });
+    saveQueue.current = task;
+    return task;
+  };
   const [connection, setConnection] = useState('Connecting to orders...');
   const [toast, setToast] = useState('');
   const [pushState, setPushState] = useState('Checking notification support...');
@@ -66,8 +77,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
         const subscription = await registration.pushManager.getSubscription();
         if (stopped) return;
         if (subscription && Notification.permission === 'granted') {
-          const saved = await apiFetch(outletId, '/api/push/subscription', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(subscription)});
-          if (!saved.ok) throw new Error();
+          await saveSubscription(subscription);
           if (!stopped) {setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');}
         } else setPushState(Notification.permission === 'denied' ? 'Alerts blocked. Change this site permission in browser settings.' : 'Allow alerts on this device, even when the site is closed.');
       } catch { if (!stopped) setPushState('Could not set up background alerts. Try again.'); }
@@ -92,8 +102,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
       await navigator.serviceWorker.ready;
       const bytes = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
       const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
-      const res = await apiFetch(outletId, '/api/push/subscription', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(subscription)});
-      if (!res.ok) { await subscription.unsubscribe(); throw new Error('Could not enable alerts. Try again.'); }
+      try { await saveSubscription(subscription); } catch (error) { await subscription.unsubscribe(); throw error; }
       setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');
     } catch (error: any) { setPushState(error.message || 'Could not enable alerts. Try again.'); }
     finally { setBusy(false); }
