@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const jiti = require('jiti')(__filename);
+const {decodeRecovery, recoveryKey, elapsedLabel, ticketToken} = jiti('../src/lib/pos-recovery.ts');
+const state = {version:1, cart:[{menuItemId:'dish',quantity:2,totalPrice:200}], heldOrders:[], orderType:'TAKEAWAY', deliveryCharge:0, discountPercent:0,
+  pendingCheckout:{idempotencyKey:'POS-fixed', items:[{menuItemId:'dish',quantity:2}], totalAmount:210}};
+assert.equal(decodeRecovery(null), null);
+assert.deepEqual(decodeRecovery(JSON.stringify(state)), state);
+assert.equal(decodeRecovery(JSON.stringify(state)).pendingCheckout.idempotencyKey,'POS-fixed');
+assert.notEqual(recoveryKey('r','u','o1'), recoveryKey('r','u','o2'));
+assert.notEqual(recoveryKey('r','u','o'), recoveryKey('r','v','o'));
+assert.notEqual(recoveryKey('r','u','o'), recoveryKey('s','u','o'));
+for (const raw of ['{', '{"version":2}', JSON.stringify({...state, cart:[{quantity:-1}]}), JSON.stringify({...state,pendingCheckout:{}})]) assert.throws(()=>decodeRecovery(raw));
+assert.equal(elapsedLabel('2026-10-01T00:00:00Z', Date.parse('2026-10-03T03:00:00Z')), '2d 3h old');
+assert.equal(elapsedLabel('invalid'), 'Time unavailable');
+assert.equal(elapsedLabel('2026-10-01T00:00:00Z', Date.parse('2026-09-30T00:00:00Z')), '0m elapsed');
+assert.equal(ticketToken('KOT-20261015-abcdef01-1234-1234-1234-abcdef123456'), 'EF123456');
+const pos = fs.readFileSync(path.join(__dirname,'../src/app/(dashboard)/pos/page.tsx'),'utf8');
+assert.ok(!pos.includes('GSTIN27AAAAA0000A1Z5'));
+assert.ok(!pos.includes('GST 5%'));
+assert.ok(!pos.includes("? 40 : 0"));
+assert.ok(pos.includes('const payload = pendingCheckout ||'));
+assert.ok(pos.indexOf('localStorage.setItem(scope, JSON.stringify({ ...snapshot(), pendingCheckout: payload }))') < pos.indexOf("'/api/pos/checkout'"));
+const analytics = fs.readFileSync(path.join(__dirname,'../src/server/services/analytics.service.ts'),'utf8');
+assert.ok(analytics.includes(' / 10 : null;'));
+console.log('PASS: recovery round-trip, corruption, tenant/user/outlet isolation, stable retry identity, elapsed labels, tokens and receipt/empty-state regressions');
