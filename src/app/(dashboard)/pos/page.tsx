@@ -2,7 +2,8 @@
 import { apiFetch } from '@/lib/api-fetch';
 
 import { Scale } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { recoveryKey, decodeRecovery } from '@/lib/pos-recovery';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutlet } from '../layout';
 import {
   Search,
@@ -32,6 +33,18 @@ import { Badge } from '@/components/ui/Badge';
 
 export default function PosPage() {
   const { activeOutletId, user } = useOutlet();
+
+  const [catalogError, setCatalogError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [storageError, setStorageError] = useState('');
+  const [scope, setScope] = useState('');
+  const [pendingCheckout, setPendingCheckout] = useState<any>(null);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [restaurant, setRestaurant] = useState<any>(null);
+  const busy = useRef(false);
+  const hydratedScope = useRef('');
+  const appliedTable = useRef('');
+  const key = user?.id && activeOutletId ? recoveryKey(user.restaurantId, user.id, activeOutletId) : '';
 
   // Catalog State
   const [categories, setCategories] = useState<any[]>([]);
@@ -76,32 +89,87 @@ export default function PosPage() {
   const fetchCatalog = async () => {
     if (!activeOutletId) return;
     setLoading(true);
+    setCatalogError('');
+    setItems([]); setCategories([]); setTables([]); setCustomers([]);
+    const requestedOutlet = activeOutletId;
     try {
       const res = await apiFetch(activeOutletId, `/api/pos/catalog?outletId=${activeOutletId}`);
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Catalog unavailable');
+      if (hydratedScope.current !== recoveryKey(user.restaurantId, user.id, requestedOutlet)) return;
       if (data.success) {
+        setRestaurant(data.catalog.restaurant);
         setCategories(data.catalog.categories || []);
         setItems(data.catalog.items || []);
         setTables(data.catalog.tables || []);
         setCustomers(data.catalog.customers || []);
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      setCatalogError(err.message || 'Could not load menu. Check the connection and retry.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!key) return;
+    setScope(''); hydratedScope.current = key; appliedTable.current = '';
+    setCart([]); setHeldOrders([]); setSelectedTable(null); setSelectedCustomer(null);
+    setOrderType('DINE_IN'); setDiscountPercent(0); setOrderNotes(''); setDeliveryCharge(0);
+    setPendingCheckout(null); setCompletedOrder(null); setShowPaymentModal(false);
+    setStorageError(''); setNotice('');
+    try {
+      const saved = decodeRecovery(localStorage.getItem(key));
+      if (saved) {
+        setCart(saved.cart); setHeldOrders(saved.heldOrders); setOrderType(saved.orderType);
+        setSelectedTable(saved.selectedTable); setSelectedCustomer(saved.selectedCustomer);
+        setDiscountPercent(saved.discountPercent); setOrderNotes(saved.orderNotes || '');
+        setDeliveryCharge(saved.deliveryCharge); setPendingCheckout(saved.pendingCheckout || null);
+        if (saved.cart.length || saved.heldOrders.length) setNotice('Recovered orders from this device. Review prices before payment.');
+      }
+      setScope(key);
+    } catch (err: any) { setStorageError(err.message || 'Device storage unavailable. Checkout paused.'); }
     fetchCatalog();
-  }, [activeOutletId]);
+  }, [key]);
+
+  const snapshot = () => ({ version: 1, cart, heldOrders, orderType, selectedTable, selectedCustomer,
+    discountPercent, orderNotes, deliveryCharge, pendingCheckout });
+  useEffect(() => {
+    if (!scope || scope !== key || storageError) return;
+    try { localStorage.setItem(scope, JSON.stringify(snapshot())); }
+    catch { setStorageError('Could not save on this device. Free storage or enable site storage, then reload. Checkout paused.'); }
+  }, [scope, key, cart, heldOrders, orderType, selectedTable, selectedCustomer, discountPercent, orderNotes, deliveryCharge, pendingCheckout]);
+
+  useEffect(() => {
+    if (loading || scope !== key || !scope || catalogError) return;
+    const id = new URLSearchParams(window.location.search).get('tableId');
+    if (!id || appliedTable.current === `${scope}:${id}`) return;
+    appliedTable.current = `${scope}:${id}`;
+    const table = tables.find(t => t.id === id);
+    if (!table) { setNotice('That table is not available in this outlet. No table selected.'); return; }
+    if (cart.length || pendingCheckout) { setNotice('Recovered cart kept. Select the requested table after holding or completing it.'); return; }
+    if (table.currentOrderId || table.status === 'OCCUPIED') { setNotice('This table has a running bill. Open Orders & Bills to review it; adding to a running bill is not supported here yet.'); return; }
+    setSelectedTable(table); setOrderType('DINE_IN'); setNotice(`Table ${table.tableNumber} selected.`);
+  }, [loading, scope, key, tables]);
+
+  useEffect(() => {
+    if (!items.length || pendingCheckout || scope !== key) return;
+    setCart(previous => previous.map(c => {
+      const menu = items.find(m => m.id === c.menuItemId);
+      if (!menu) return c; // Checkout reports the missing dish rather than deleting it.
+      const variant = c.variantId ? menu.variants?.find((v: any) => v.id === c.variantId) : null;
+      const addons = (c.addons || []).map((a: any) => menu.addons?.find((x: any) => x.name === a.name) || a);
+      const unitPrice = Math.round(((variant?.price ?? menu.basePrice) + addons.reduce((n: number, a: any) => n + a.price, 0)) * 100) / 100;
+      return { ...c, unitPrice, totalPrice: Math.round(unitPrice * c.quantity * 100) / 100, addons };
+    }));
+  }, [items, pendingCheckout, scope, key]);
 
   // Cart Calculations
   const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   const discountAmount = Math.round(((subtotal * discountPercent) / 100) * 100) / 100;
   const taxable = subtotal - discountAmount;
-  const taxAmount = Math.round(cart.reduce((sum, c) => {const menu = items.find((m: any) => m.id === c.menuItemId); return sum + c.totalPrice * (menu?.taxRate ?? 5) / 100;}, 0) * (subtotal ? taxable / subtotal : 0) * 100) / 100;
-  const deliveryFee = orderType === 'DELIVERY' ? 40 : 0;
+  const taxAmount = Math.round(cart.reduce((sum, c) => {const menu = items.find((m: any) => m.id === c.menuItemId); return sum + c.totalPrice * (menu?.taxRate ?? 0) / 100;}, 0) * (subtotal ? taxable / subtotal : 0) * 100) / 100;
+  const deliveryFee = orderType === 'DELIVERY' ? deliveryCharge : 0;
   const grandTotal = Math.max(0, Math.round((taxable + taxAmount + deliveryFee) * 100) / 100);
 
   // Handle Item Click: if item has variants or addons, open modal; otherwise add directly
@@ -165,7 +233,7 @@ export default function PosPage() {
 
   // Hold / Resume Order
   const handleHoldOrder = () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || pendingCheckout || storageError) return;
     const held = {
       id: `HOLD-${Date.now()}`,
       orderType,
@@ -175,6 +243,7 @@ export default function PosPage() {
       discountPercent,
       orderNotes,
       heldAt: new Date(),
+      deliveryCharge,
     };
     setHeldOrders([...heldOrders, held]);
     // Clear active cart
@@ -186,6 +255,9 @@ export default function PosPage() {
   };
 
   const handleResumeOrder = (held: any) => {
+    if (pendingCheckout || storageError) return;
+    if (cart.length) { setNotice('Hold or complete the current cart before resuming another order.'); setShowHeldModal(false); return; }
+    setDeliveryCharge(held.deliveryCharge || 0);
     setOrderType(held.orderType);
     setSelectedTable(held.selectedTable);
     setSelectedCustomer(held.selectedCustomer);
@@ -198,7 +270,9 @@ export default function PosPage() {
 
   // Checkout Execution
   const handleFinalizeOrder = async () => {
-    if (cart.length === 0) return;
+    if (!pendingCheckout && cart.some(c => !items.some(m => m.id === c.menuItemId))) { setNotice('A saved dish is no longer on the menu. Remove it or hold this cart before payment.'); return; }
+    if (cart.length === 0 || busy.current || storageError || scope !== key || catalogError || loading) return;
+    busy.current = true;
     setIsProcessingPayment(true);
 
     try {
@@ -212,17 +286,13 @@ export default function PosPage() {
         payments.push({
           amount: grandTotal,
           paymentMethod,
-          transactionRef: `${paymentMethod}-${Date.now().toString().slice(-6)}`,
+
         });
       }
 
       // Generate client idempotency key to prevent double deduction
-      const idempotencyKey = `POS-${activeOutletId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-      const res = await apiFetch(activeOutletId, '/api/pos/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-outlet-id': activeOutletId },
-        body: JSON.stringify({
+      const idempotencyKey = pendingCheckout?.idempotencyKey || `POS-${crypto.randomUUID()}`;
+      const payload = pendingCheckout || {
           outletId: activeOutletId,
           orderType,
           tableId: selectedTable?.id || null,
@@ -246,10 +316,17 @@ export default function PosPage() {
           totalAmount: grandTotal,
           notes: orderNotes,
           payments,
-        }),
+      };
+      // Freeze the exact submitted payload before the request. A lost response must
+      // never become a fresh payment when the operator retries or reloads.
+      try { localStorage.setItem(scope, JSON.stringify({ ...snapshot(), pendingCheckout: payload })); }
+      catch { setStorageError('Checkout stopped: unable to save the retry identity on this device.'); return; }
+      setPendingCheckout(payload); setShowPaymentModal(false);
+      const res = await apiFetch(activeOutletId, '/api/pos/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
-
       const data = await res.json();
+      if (hydratedScope.current !== scope) return; // Keep old-outlet recovery locked for reconciliation.
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Checkout failed');
       }
@@ -258,11 +335,17 @@ export default function PosPage() {
       setCompletedOrder({
         ...data.order,
         items: data.items,
-        payments,
+        payments: data.order.payments || payload.payments,
+        restaurant: data.receiptRestaurant || restaurant,
         tableName: selectedTable?.tableNumber,
         customerName: selectedCustomer?.name,
         consumption: data.consumption,
       });
+      // Persist the receipt and cleared cart atomically before unlocking a new sale.
+      try { localStorage.setItem(scope, JSON.stringify({ ...snapshot(), cart: [], selectedTable: null,
+        selectedCustomer: null, discountPercent: 0, orderNotes: '', pendingCheckout: null, deliveryCharge: 0 })); }
+      catch { setStorageError('Order saved on server, but device cleanup failed. Do not start another payment. Reload and retry to recover the same receipt.'); return; }
+      setPendingCheckout(null); setDeliveryCharge(0); setNotice('Order saved. UPI/card entries are manually recorded, not gateway-verified.');
       setShowPaymentModal(false);
       setCart([]);
       setSelectedTable(null);
@@ -270,8 +353,10 @@ export default function PosPage() {
       setDiscountPercent(0);
       setOrderNotes('');
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      if (hydratedScope.current !== scope) return;
+      setNotice(`Checkout not confirmed: ${err.message}. Retry this same checkout, or check Orders & Bills before taking another payment. Cart editing is locked to avoid duplicates.`);
     } finally {
+      busy.current = false;
       setIsProcessingPayment(false);
     }
   };
@@ -287,7 +372,20 @@ export default function PosPage() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100dvh-6rem)] max-w-[1600px] mx-auto select-none">
+    <><div className="mb-3 space-y-2 text-sm">
+      <p className="text-slate-500">Draft recovery is device-only. Online connection required to save an order.</p>
+      {(notice || storageError || catalogError) && <div role="status" className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900">{storageError || catalogError || notice}</div>}
+      {orderType === 'DELIVERY' && <label className="flex gap-3 items-center">Delivery fee for this order (Rs)
+        <input aria-label="Delivery fee" type="number" min="0" step="0.01" value={deliveryCharge} disabled={!!pendingCheckout} onChange={e => setDeliveryCharge(Math.max(0, Number(e.target.value) || 0))} className="p-2 border rounded-lg w-28" />
+      </label>}
+      {catalogError && <button className="underline" onClick={fetchCatalog}>Retry catalog</button>}
+      {pendingCheckout && <div className="p-3 border border-amber-300 bg-amber-50 rounded-xl">
+        <p>Checkout awaiting confirmation. Do not take payment again. Retry uses the original request.</p>
+        <button disabled={isProcessingPayment || !!storageError || !!catalogError || loading} className="mt-2 px-4 py-3 rounded-xl bg-emerald-600 text-white disabled:opacity-50" onClick={handleFinalizeOrder}>{isProcessingPayment ? 'Checking...' : 'Retry same checkout'}</button>
+        <a href="/orders" className="ml-4 underline">Check Orders & Bills</a>
+      </div>}
+    </div><fieldset disabled={!!pendingCheckout || !!storageError || scope !== key || loading || !!catalogError} className="min-w-0 w-full">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:h-[calc(100dvh-15rem)] lg:min-h-[540px] max-w-[1600px] mx-auto select-none">
       {/* LEFT: Catalog & Item Grid */}
       <div className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-3 sm:p-5 h-[75dvh] lg:h-auto flex-shrink-0 lg:flex-shrink">
         {/* Top Controls: Order Type & Search */}
@@ -405,7 +503,7 @@ export default function PosPage() {
                           </span>
                         )}
                       </div>
-                      <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                      <h4 className="font-extrabold text-slate-900 text-base sm:text-base line-clamp-2 group-hover:text-emerald-700 transition-colors">
                         {item.name}
                       </h4>
                       <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
@@ -515,7 +613,7 @@ export default function PosPage() {
               <div key={item.cartItemId} className="py-2.5 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <span className="font-bold text-slate-900 text-xs">{item.name}</span>
+                    <span className="font-bold text-slate-900 text-base">{item.name}</span>
                     {item.addons && item.addons.length > 0 && (
                       <span className="text-[10px] text-slate-400 block">
                         + {item.addons.map((a: any) => a.name).join(', ')}
@@ -539,8 +637,9 @@ export default function PosPage() {
                   </span>
                   <div className="flex items-center gap-1.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                     <button
+                      aria-label={`Decrease ${item.name}`}
                       onClick={() => updateQuantity(item.cartItemId, -1)}
-                      className="w-5 h-5 rounded-md bg-white text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors shadow-sm"
+                      className="w-10 h-10 rounded-md bg-white text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors shadow-sm"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -548,8 +647,9 @@ export default function PosPage() {
                       {item.quantity}
                     </span>
                     <button
+                      aria-label={`Increase ${item.name}`}
                       onClick={() => updateQuantity(item.cartItemId, 1)}
-                      className="w-5 h-5 rounded-md bg-white text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors shadow-sm"
+                      className="w-10 h-10 rounded-md bg-white text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors shadow-sm"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -591,7 +691,7 @@ export default function PosPage() {
             </div>
 
             <div className="flex justify-between text-slate-600">
-              <span>GST Tax (5%)</span>
+              <span>Tax (menu rates)</span>
               <span className="font-semibold">{formatCurrency(taxAmount)}</span>
             </div>
 
@@ -776,7 +876,7 @@ export default function PosPage() {
                 }`}
               >
                 <QrCode className="w-5 h-5 text-emerald-600" />
-                <span>UPI / QR</span>
+                <span>UPI (manual)</span>
               </button>
               <button
                 onClick={() => setPaymentMethod('CASH')}
@@ -902,7 +1002,7 @@ export default function PosPage() {
       <Modal
         isOpen={showHeldModal}
         onClose={() => setShowHeldModal(false)}
-        title="Held Orders in Memory"
+        title="Held orders on this device"
         maxWidth="md"
       >
         <div className="divide-y divide-slate-100">
@@ -947,8 +1047,10 @@ export default function PosPage() {
           {/* Printable Thermal Receipt Box */}
           <div id="printable-receipt" className="bg-white border-2 border-dashed border-slate-300 p-5 rounded-2xl font-mono text-xs text-slate-900 space-y-3">
             <div className="text-center border-b border-slate-200 pb-2">
-              <h3 className="font-black text-sm tracking-wider uppercase">{user?.restaurantName || 'Demo Kitchen'}</h3>
-              <p className="text-[10px] text-slate-500">GSTIN: GSTIN27AAAAA0000A1Z5</p>
+              <h3 className="font-black text-sm tracking-wider uppercase">{completedOrder?.restaurant?.name || user?.restaurantName || 'Restaurant'}</h3>
+              {completedOrder?.restaurant?.address && <p>{completedOrder.restaurant.address}</p>}
+              {completedOrder?.restaurant?.phone && <p>{completedOrder.restaurant.phone}</p>}
+              {completedOrder?.restaurant?.taxNumber && <p>GSTIN / Tax ID: {completedOrder.restaurant.taxNumber}</p>}
               <p className="text-[10px] text-slate-500">Order: {completedOrder?.orderNumber}</p>
               <p className="text-[10px] text-slate-500">
                 {new Date(completedOrder?.createdAt || Date.now()).toLocaleString()}
@@ -978,9 +1080,10 @@ export default function PosPage() {
                 </div>
               )}
               <div className="flex justify-between">
-                <span>Tax (GST 5%):</span>
+                <span>Tax (menu rates):</span>
                 <span>{formatCurrency(completedOrder?.taxAmount || 0)}</span>
               </div>
+              {completedOrder?.deliveryFee > 0 && <div className="flex justify-between"><span>Delivery fee:</span><span>{formatCurrency(completedOrder.deliveryFee)}</span></div>}
               <div className="flex justify-between font-black text-sm pt-1 border-t border-slate-300">
                 <span>GRAND TOTAL:</span>
                 <span>{formatCurrency(completedOrder?.totalAmount || 0)}</span>
@@ -992,6 +1095,7 @@ export default function PosPage() {
             </div>
           </div>
 
+          <p className="text-xs text-slate-500">Payments are cashier-recorded. UPI/card status is not bank verification.</p>
           {/* Print & Close Buttons */}
           <div className="flex gap-2">
             <button
@@ -1010,6 +1114,6 @@ export default function PosPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </div></fieldset></>
   );
 }
