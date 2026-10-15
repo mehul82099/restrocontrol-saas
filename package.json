@@ -10,9 +10,10 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
     "prisma:seed": "node scripts/seed.js",
-    "test": "node tests/suite.js",
+    "test": "node tests/reliability-regression.js && node tests/suite.js",
     "test:security": "node tests/security-regression.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:reliability": "node tests/reliability-regression.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
