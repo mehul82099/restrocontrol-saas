@@ -59,6 +59,27 @@ async function main() {
  await test('Expired subscription cannot display',async()=>{await subscribe(req('/api/push/subscription',ownerToken,'POST',body));const row=await prisma.staffPushSubscription.findUnique({where:{endpoint:body.endpoint}});await prisma.staffPushSubscription.update({where:{id:row.id},data:{expiresAt:new Date(0)}});assert.equal((await current(req('/api/push/current?id='+row.id))).status,401);});
  await test('Push off by default without keys; order path does not throw',async()=>{const key=process.env.WEB_PUSH_PRIVATE_KEY;delete process.env.WEB_PUSH_PRIVATE_KEY;await notifyOrderStaff(restaurant.id,outlet.id);process.env.WEB_PUSH_PRIVATE_KEY=key;});
  await test('Unsubscribe removes only current login subscriptions',async()=>{await subscribe(req('/api/push/subscription',ownerToken,'POST',body));assert.equal((await unsubscribe(req('/api/push/subscription',ownerToken,'DELETE'))).status,200);assert.equal(await prisma.staffPushSubscription.count({where:{sessionHash:sessionHash(ownerToken)}}),0);});
+ await test('Sender rechecks current permission and removes forbidden registration',async()=>{
+   await subscribe(req('/api/push/subscription',ownerToken,'POST',body));
+   let sends=0;const original=webpush.sendNotification;webpush.sendNotification=async()=>{sends++;return {statusCode:201}};
+   try { await prisma.user.update({where:{id:owner.id},data:{role:'INVENTORY_MANAGER'}});await notifyOrderStaff(restaurant.id,outlet.id);assert.equal(sends,0);assert.equal(await prisma.staffPushSubscription.count({where:{endpoint:body.endpoint}}),0); }
+   finally {await prisma.user.update({where:{id:owner.id},data:{role:'OWNER'}});webpush.sendNotification=original;}
+ });
+ await test('Delivery carries no customer/order content and removes gone endpoint',async()=>{
+   await subscribe(req('/api/push/subscription',ownerToken,'POST',body));
+   const original=webpush.sendNotification;let sends=0;
+   webpush.sendNotification=async (subscription,payload,options)=>{sends++;assert.deepEqual(Object.keys(JSON.parse(payload)),['subscriptionId']);assert.equal(options.TTL,30);throw {statusCode:410};};
+   try {await notifyOrderStaff(restaurant.id,outlet.id);assert.equal(sends,1);assert.equal(await prisma.staffPushSubscription.count({where:{endpoint:body.endpoint}}),0);}
+   finally {webpush.sendNotification=original;}
+ });
+ await test('Worker suppresses unauthorized/offline deliveries and shows only generic authorized text',async()=>{
+   const vm=require('node:vm'),source=require('node:fs').readFileSync(path.resolve(__dirname,'../public/staff-push-sw.js'),'utf8');
+   const handlers={},shown=[];let ok=false,offline=false;
+   const self={location:{origin:'https://local.invalid'},clients:{matchAll:async()=>[]},registration:{showNotification:async(...args)=>shown.push(args)},addEventListener:(name,callback)=>handlers[name]=callback};
+   vm.runInNewContext(source,{self,fetch:async()=>{if(offline)throw new Error('offline');return {ok,json:async()=>({success:true,url:'/orders'})}},URL,encodeURIComponent});
+   const deliver=async()=>{let job;handlers.push({data:{json:()=>({subscriptionId:'local-only'})},waitUntil:p=>job=p});await job;};
+   await deliver();assert.equal(shown.length,0);offline=true;await deliver();assert.equal(shown.length,0);offline=false;ok=true;await deliver();assert.equal(shown.length,1);assert.equal(shown[0][0],'RestroControl');assert.equal(shown[0][1].body,'Order activity updated. Open your staff screen.');
+ });
  console.log(passed+' LIVE ORDER / PUSH REGRESSIONS PASSED');
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>prisma.$disconnect());
