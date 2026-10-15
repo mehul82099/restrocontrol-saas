@@ -1,31 +1,15 @@
-/* Review-only migration preparation. Default is a read-only dry run.
- * Apply is restricted to an isolated localhost database. No production apply route.
+/* Default read-only dry run. --apply is restricted to an isolated localhost DB.
+ * No production apply route. Schema SQL must be reviewed/applied separately.
  */
 const fs = require('node:fs');
 const { PrismaClient } = require('@prisma/client');
-const CATALOG = [
-  { code: 'WEBSITE_SINGLE', name: '1 outlet setup', price: 499, upcoming: false },
-  { code: 'WEBSITE_MULTI', name: '2 or more outlets', price: 699, upcoming: false },
-  { code: 'APP_SINGLE', name: 'App + website access', price: 699, upcoming: true },
-  { code: 'APP_MULTI', name: 'App + website, 2+ outlets', price: 999, upcoming: true },
-];
-function compile(config) {
-  if (config.billingFrequency !== 'MONTHLY' || config.monthlyCadenceConfirmed !== true) throw new Error('Monthly cadence must be confirmed before writing into priceMonthly fields.');
-  return CATALOG.map(p => {
-    const q = config.quotas?.[p.code];
-    if (!q) throw new Error(`Missing approved quotas: ${p.code}`);
-    for (const field of ['maxOutlets','maxUsers','maxOrdersPerMonth']) if (!Number.isSafeInteger(q[field]) || q[field] < 1) throw new Error(`Explicit positive quota required: ${p.code}.${field}. Do not use a guessed unlimited sentinel.`);
-    if (p.code === 'WEBSITE_SINGLE' && q.maxOutlets !== 1) throw new Error('Website single plan must have one outlet.');
-    if (p.code.endsWith('_MULTI') && q.maxOutlets < 2) throw new Error('Multi-outlet plan must support at least two outlets.');
-    if (typeof q.hasAdvancedReports !== 'boolean' || typeof q.hasAiFeatures !== 'boolean') throw new Error('Feature entitlements require explicit review.');
-    return { code:p.code, name:p.name, priceMonthly:p.price, priceYearly:0, maxOutlets:q.maxOutlets, maxUsers:q.maxUsers, maxOrdersPerMonth:q.maxOrdersPerMonth, hasAdvancedReports:q.hasAdvancedReports, hasAiFeatures:q.hasAiFeatures, features:JSON.stringify([p.upcoming ? 'Upcoming - not available for purchase' : 'Website access', p.name, 'No annual plan is offered']) };
-  });
-}
+const { catalogueRows } = require('./plan-catalog-data.cjs');
+const CATALOG = require('../src/lib/plan-catalog.json');
+function compile() { return catalogueRows(); }
 async function main() {
   const file = process.argv.find(x => x.startsWith('--config='))?.slice(9);
-  if (!file) throw new Error('Use --config=/path/to/reviewed-config.json. Default is dry-run; --apply is localhost only.');
-  const config = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const plans = compile(config);
+  const config = file ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+  const plans = compile();
   const apply = process.argv.includes('--apply');
   if (apply) {
     const host = new URL(process.env.DATABASE_URL || '').hostname;
@@ -40,20 +24,21 @@ async function main() {
       const sub = subscriptions.find(s=>s.restaurantId === restaurantId);
       const plan = CATALOG.find(p=>p.code === code && !p.upcoming);
       if (!sub || !plan) throw new Error('Assignment must name an existing restaurant and an available website plan.');
-      const outletCount = await prisma.outlet.count({where:{restaurantId,isActive:true}});
-      const userCount = await prisma.user.count({where:{restaurantId,isActive:true}});
-      const target = plans.find(p=>p.code === code);
-      if (outletCount > target.maxOutlets || userCount > target.maxUsers) throw new Error('Assignment exceeds reviewed quota; resolve without deleting data.');
+      const outlets = await prisma.outlet.count({where:{restaurantId,isActive:true}});
+      if (plan.maxOutlets !== null && outlets > plan.maxOutlets) throw new Error('Assignment exceeds reviewed outlet quota; resolve without deleting data.');
       moves.push({restaurantId,from:sub.plan.code,to:code});
     }
-    const report = {dryRun:!apply,plans,moves,unassigned:subscriptions.filter(s=>!assignments[s.restaurantId]).map(s=>({restaurantId:s.restaurantId,planCode:s.plan.code})),notes:['No automatic legacy-tier mapping.','No subscription status, payment, mandate or period changes.','No legacy plan deletion. Unassigned accounts retain existing entitlements.','priceYearly=0 is not a free annual offer; annual billing must stay disabled.']};
+    const report = {dryRun:!apply,plans,moves,unassigned:subscriptions.filter(s=>!assignments[s.restaurantId]).map(s=>({restaurantId:s.restaurantId,planCode:s.plan.code})),notes:['No automatic legacy-tier mapping.','No subscription status, payment, mandate or period changes.','No legacy plan deletion. Unassigned accounts retain existing entitlements.','priceYearly=null means no annual offer. null quotas mean unlimited.']};
     if (apply) await prisma.$transaction(async tx=>{
       for (const plan of plans) await tx.plan.upsert({where:{code:plan.code},create:plan,update:plan});
       for (const move of moves) {
         const plan = await tx.plan.findUniqueOrThrow({where:{code:move.to}});
+        // Recheck in the transaction; never delete excess outlets or silently downgrade.
+        const count = await tx.outlet.count({where:{restaurantId:move.restaurantId,isActive:true}});
+        if (plan.maxOutlets !== null && count > plan.maxOutlets) throw new Error('Outlet quota changed since dry run.');
         await tx.subscription.update({where:{restaurantId:move.restaurantId},data:{planId:plan.id}});
       }
-    });
+    },{isolationLevel:'Serializable'});
     console.log(JSON.stringify(report,null,2));
   } finally { await prisma.$disconnect(); }
 }
