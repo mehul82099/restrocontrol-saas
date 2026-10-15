@@ -55,12 +55,12 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.user.findFirst({ where: { email }, select: { id: true } });
     if (existing) return NextResponse.json({ success: false, error: 'An account with this email already exists. Sign in instead.' }, { status: 409 });
 
-    let plan = await prisma.plan.findUnique({ where: { code: 'PRO' } });
+    let plan = await prisma.plan.findUnique({ where: { code: 'WEBSITE_SINGLE' } });
     if (!plan) {
       await SubscriptionService.seedStandardPlans();
-      plan = await prisma.plan.findUnique({ where: { code: 'PRO' } });
+      plan = await prisma.plan.findUnique({ where: { code: 'WEBSITE_SINGLE' } });
     }
-    if (!plan) throw new Error('plan missing');
+    if (!plan?.isAvailable) throw new Error('plan unavailable');
 
     const passwordHash = await bcrypt.hash(password, 12);
     const now = new Date();
