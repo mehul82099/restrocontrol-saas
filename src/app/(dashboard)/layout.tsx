@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import dynamic from 'next/dynamic';
+import { StaffOrderUpdates } from '@/components/live/StaffOrderUpdates';
 
 const Landing = dynamic(() => import('@/components/world/Landing'));
 
@@ -107,6 +108,7 @@ export default function DashboardLayout({
             onOutletChange={setActiveOutletId}
             onMenuClick={() => setSidebarOpen(true)}
           />
+          <StaffOrderUpdates user={user} outletId={activeOutletId} />
           {trial?.isTrial && !trial.expired && (
             <div className="bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-3 sm:px-6 py-2 text-center">
               Free trial: {trial.daysRemaining} {trial.daysRemaining === 1 ? 'day' : 'days'} remaining
@@ -123,7 +125,7 @@ export default function DashboardLayout({
                   onClick={() => router.push('/plans')}
                   className="mt-6 mr-2 px-5 py-2.5 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-500"
                 >
-                  View plan (₹499/month)
+                  View plans
                 </button>
                 <button
                   onClick={async () => {
