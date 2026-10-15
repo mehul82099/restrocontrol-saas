@@ -5,6 +5,7 @@ const form = fs.readFileSync('src/components/public/RefundFeedbackForm.tsx','utf
 assert.ok(page.includes('within 24 hours of form submission'));
 assert.ok(!/processing time (remains|is still) pending/.test(page));
 for (const phrase of ['latest payment','7-day','80%','RefundFeedbackForm']) assert.ok(page.includes(phrase));
-for (const phrase of ['Why do you want a refund?','Why do you not like the service?','Preview only.','Nothing was submitted or saved.']) assert.ok(form.includes(phrase));
-assert.ok(!/fetch\(|localStorage|sessionStorage|mailto:/.test(form));
-console.log('PASS: refund timing and eligibility copy; required two-question, no-send/no-storage preview form');
+for (const phrase of ['Why do you want a refund?','Why do you not like the service?','Demo only.','Nothing was submitted or saved.']) assert.ok(form.includes(phrase));
+assert.ok(!/localStorage|sessionStorage|mailto:/.test(form));
+assert.ok(form.includes("fetch('/api/refunds'"));
+console.log('PASS: refund timing and eligibility copy; required two-question, opt-in saved intake and no browser storage');
