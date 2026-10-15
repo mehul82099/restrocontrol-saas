@@ -17,7 +17,7 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
     finally { setBusy(null); }
   }
   return <div className="mt-7">
-    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">Preview pricing. Prices are per month. Tax treatment and usage limits are being confirmed. Razorpay autopay is not connected. Upcoming plans cannot be selected.</div>
+    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">Preview pricing. Prices are per month. Both website plans include unlimited staff and orders. Tax treatment is being confirmed. Razorpay autopay is not connected. Upcoming plans cannot be selected.</div>
     <div className="grid gap-4 sm:grid-cols-2">
       {SUBSCRIPTION_PLANS.map(plan => <section key={plan.code} className={`flex min-w-0 flex-col rounded-2xl border bg-white p-5 ${plan.upcoming ? 'border-stone-200' : 'border-emerald-300'}`}>
         <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold ${plan.upcoming ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-800'}`}>{plan.upcoming ? 'Upcoming' : 'Website plan'}</span>
