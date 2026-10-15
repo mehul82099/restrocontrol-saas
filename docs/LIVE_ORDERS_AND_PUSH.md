@@ -7,7 +7,7 @@ Production must not be changed until the owner approves publishing.
 - The signed-in dashboard checks an authenticated, tenant/outlet-scoped revision every four seconds while visible, every 30 seconds while hidden. It catches up on reconnect/focus, backs off after failures, and shows a stale/reconnecting notice.
 - Changed revisions refresh the order list, kitchen board, owner/manager metrics, and POS table availability without resetting carts, held orders or payment state. A short in-app popup signals order activity. The initial load does not replay old activity.
 - This is near-live automatic refresh, not a persistent WebSocket connection or a guarantee of instant delivery. No paid pub/sub service or Redis is required. Database/serverless usage still counts toward the host's free allowances; monitor usage before scaling.
-- Owner, Manager, Cashier and Kitchen Staff are included. There is no waiter role yet; that needs an agreed permission set before adding it.
+- Owner, Manager, Cashier and Kitchen Staff receive order activity. The approved Waiter role uses a dedicated unpaid order-entry and ready-ticket screen. It cannot take payments, issue refunds/cancellations, change kitchen statuses, view full bill history or see sales reports. Waiter background alerts are sent only when a ticket becomes READY.
 
 ## Background push setup (not enabled on production)
 
@@ -27,7 +27,7 @@ If the environment is not configured, the UI says setup is pending. It must not 
 - Server dispatch rechecks user activity, membership, role, outlet and trial. The queued payload contains only a random subscription ID, not order/customer details or credentials.
 - On receipt, the service worker fetches the current authenticated session and matching subscription before showing a generic order-activity notification. Signed-out/expired/disabled/unassigned users fail closed, including an old push arriving after sign-out. No authenticated page/API caching is added. A notification already displayed before sign-out may remain in the operating system notification tray.
 - Subscriptions expire with the 12-hour login. Logout removes registrations for that session. 404/410 browser endpoints are removed. The host should periodically remove expired rows as routine maintenance; no paid scheduler is installed by this change.
-- Delivery is best effort after a committed order create/cancel/refund or kitchen update. An idempotent checkout retry does not send again. Push failures never undo the order. There is no durable push retry queue, so a process interruption/provider outage can lose an alert; the in-app revision check recovers the authoritative order state when the page returns.
+- Delivery is best effort after a committed order create/cancel/refund or kitchen update (Waiter: READY transitions only). An idempotent checkout retry does not send again. Push failures never undo the order. There is no durable push retry queue, so a process interruption/provider outage can lose an alert; the in-app revision check recovers the authoritative order state when the page returns.
 - Browser/OS support, network access, notification permission, battery/background restrictions and device settings affect delivery. Unsupported browsers retain automatic in-app updates. iPhone/iPad web push generally requires an eligible Home Screen web app. A push subscription is not an indefinitely valid staff login.
 - Native notification text is intentionally generic on lock screens. Opening it takes the staff member to their normal authenticated screen, whose existing access checks still apply.
 
@@ -36,3 +36,7 @@ If the environment is not configured, the UI says setup is pending. It must not 
 `npm run build`, `npm run test:reliability`, `npm run test:security`, and `npm run test:live-orders`.
 
 Database-dependent tests refuse a non-local database. Test VAPID keys are generated only in process; the regression suite does not send to external push services.
+
+## Waiter schema update
+
+Apply `ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'WAITER';` to the isolated preview database before assigning a waiter. The production enum must remain untouched until publish approval. The waiter API rechecks the current role and outlet assignment on every request.
