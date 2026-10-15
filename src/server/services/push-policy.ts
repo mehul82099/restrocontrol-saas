@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { hasPermission } from '../auth/permissions';
 import { UserRole } from '@prisma/client';
 export const sessionHash = (token: string) => createHash('sha256').update(token).digest('hex');
-export const orderAudience = (role: UserRole) => hasPermission(role, 'manage:orders') || hasPermission(role, 'access:kot');
+export const orderAudience = (role: UserRole) => role === 'WAITER' || hasPermission(role, 'manage:orders') || hasPermission(role, 'access:kot');
 // Never send a request to arbitrary user-supplied URLs (SSRF).
 export function validPushEndpoint(raw: unknown): raw is string {
   if (typeof raw !== 'string' || raw.length > 2048) return false;
