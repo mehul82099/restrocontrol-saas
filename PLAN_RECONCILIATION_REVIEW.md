@@ -26,3 +26,7 @@ Tests: `node tests/plan-migration-regression.cjs` validates the catalogue. DB-ba
 - Keep annual billing disabled. Connect and test Razorpay test keys, plan IDs and verified webhook lifecycle before charging or enabling an upgrade.
 - Finalise refund processing time and remaining legal/privacy details before policy publication. Hosted previews do not finalize the terms.
 - Only after explicit publish approval and a supported backup, run a separately reviewed production migration and verify outcomes. Do not reuse the local-only apply command to bypass this gate.
+
+## Refund feedback preview
+
+The draft now requires a feedback form stating why a refund is wanted and why the customer dislikes the service. Eligible refunds are issued within 24 hours of form submission, retaining the 80% / 7-day / latest-payment rules. Bank credit timing is not promised. The public form is a client-only preview: browser validation and a demo status message, no submission, storage, email, refund or processing timer. Before publication, implement and verify authenticated intake, eligibility/payment verification, operator notification and the actual refund process. Do not present the preview button as a live request channel.
