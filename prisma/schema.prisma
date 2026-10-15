@@ -13,6 +13,7 @@ enum UserRole {
   CASHIER
   KITCHEN_STAFF
   INVENTORY_MANAGER
+  WAITER
 }
 
 enum OrderType {
@@ -142,6 +143,7 @@ model Restaurant {
   auditLogs           AuditLog[]
   subscription        Subscription?
   attendanceSessions AttendanceSession[]
+  staffInvites StaffInvite[]
 
   @@index([slug])
 }
@@ -194,6 +196,8 @@ model User {
   orders      Order[]
   auditLogs   AuditLog[]
   attendanceSessions AttendanceSession[]
+  invitesCreated StaffInvite[] @relation("InviteCreator")
+  inviteUsed StaffInvite? @relation("InviteUsedBy")
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -829,4 +833,23 @@ model AttendanceSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([restaurantId, checkedInAt, id])
   @@index([userId, expiresAt])
+}
+
+// One link per staff member: single-use, 48h expiry, role preset. Only the SHA-256 of the token is stored.
+model StaffInvite {
+  id           String    @id @default(uuid())
+  restaurantId String
+  tokenHash    String    @unique
+  role         UserRole
+  label        String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  usedById     String?   @unique
+  revokedAt    DateTime?
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  usedBy       User?      @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+  @@index([restaurantId, createdAt])
 }
