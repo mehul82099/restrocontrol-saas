@@ -15,7 +15,8 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil((async () => {
-    const path = event.notification.data?.url === '/kot' ? '/kot' : '/orders';
+    const target = new URL(event.notification.data?.url || '/orders', self.location.origin);
+    const path = target.origin === self.location.origin && ['/kot', '/orders'].includes(target.pathname) ? target.pathname + target.search : '/orders';
     const windows = await self.clients.matchAll({type: 'window'});
     const client = windows.find(w => new URL(w.url).origin === self.location.origin);
     if (client) { await client.navigate(path); await client.focus(); }
