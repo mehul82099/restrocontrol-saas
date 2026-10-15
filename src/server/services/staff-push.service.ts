@@ -7,7 +7,7 @@ export function pushConfigured() {
   return !!(process.env.WEB_PUSH_PUBLIC_KEY && process.env.WEB_PUSH_PRIVATE_KEY && process.env.WEB_PUSH_SUBJECT);
 }
 // Best effort, after commit only. A push failure must never turn a successful order into a failed checkout.
-export async function notifyOrderStaff(restaurantId: string, outletId: string) {
+export async function notifyOrderStaff(restaurantId: string, outletId: string, event: 'activity' | 'ready' = 'activity') {
   if (!pushConfigured()) return;
   try {
     const subscription = await prisma.subscription.findUnique({where: {restaurantId}});
@@ -20,6 +20,7 @@ export async function notifyOrderStaff(restaurantId: string, outletId: string) {
         if (!user || !outlet || !orderAudience(user.role) || (user.role !== 'OWNER' && !user.userOutlets.some(o => o.outletId === outletId))) {
           await prisma.staffPushSubscription.deleteMany({where: {id: row.id}}); return;
         }
+        if (user.role === 'WAITER' && event !== 'ready') return;
         try {
           // No order/customer content in queued payloads. Worker re-checks the current cookie before display.
           await webpush.sendNotification({endpoint: row.endpoint, keys: {p256dh: row.p256dh, auth: row.auth}}, JSON.stringify({subscriptionId: row.id}), {
