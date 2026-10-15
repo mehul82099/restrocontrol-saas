@@ -16,6 +16,7 @@ export type Permission =
   | 'approve:wastage'
   | 'manage:stock_count'
   | 'approve:stock_count'
+  | 'access:waiter'
   | 'access:pos'
   | 'manage:orders'
   | 'cancel:order'
@@ -83,6 +84,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'view:variance',
     'manage:users',
   ],
+  WAITER: ['access:waiter'],
   CASHIER: [
     'access:pos',
     'manage:orders',
