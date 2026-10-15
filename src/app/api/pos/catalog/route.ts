@@ -32,9 +32,12 @@ async function handleGET(req: NextRequest) {
     }),
   ]);
 
+  const restaurant = await prisma.restaurant.findUnique({ where: { id: auth.restaurantId },
+    select: { name: true, taxNumber: true, address: true, phone: true } });
   return NextResponse.json({
     success: true,
     catalog: {
+      restaurant,
       categories,
       items: menuItems,
       tables,
