@@ -261,7 +261,14 @@ export default function PosPage() {
     setOrderType(held.orderType);
     setSelectedTable(held.selectedTable);
     setSelectedCustomer(held.selectedCustomer);
-    setCart(held.cart);
+    setCart(held.cart.map((c: any) => {
+      const menu = items.find(m => m.id === c.menuItemId);
+      if (!menu) return c;
+      const variant = menu.variants?.find((v: any) => v.id === c.variantId);
+      const addons = (c.addons || []).map((a: any) => menu.addons?.find((x: any) => x.name === a.name) || a);
+      const unitPrice = Math.round(((variant?.price ?? menu.basePrice) + addons.reduce((n: number, a: any) => n + a.price, 0)) * 100) / 100;
+      return { ...c, unitPrice, totalPrice: Math.round(unitPrice * c.quantity * 100) / 100, addons };
+    }));
     setDiscountPercent(held.discountPercent);
     setOrderNotes(held.orderNotes);
     setHeldOrders(heldOrders.filter((h) => h.id !== held.id));
@@ -270,7 +277,11 @@ export default function PosPage() {
 
   // Checkout Execution
   const handleFinalizeOrder = async () => {
-    if (!pendingCheckout && cart.some(c => !items.some(m => m.id === c.menuItemId))) { setNotice('A saved dish is no longer on the menu. Remove it or hold this cart before payment.'); return; }
+    if (!pendingCheckout && cart.some(c => {
+      const m = items.find(m => m.id === c.menuItemId);
+      return !m || (c.variantId && !m.variants?.some((v: any) => v.id === c.variantId)) ||
+        (c.addons || []).some((a: any) => !m.addons?.some((x: any) => x.name === a.name));
+    })) { setNotice('A saved dish, variant or add-on is no longer available. Remove it and choose from the current menu before payment.'); setShowPaymentModal(false); return; }
     if (cart.length === 0 || busy.current || storageError || scope !== key || catalogError || loading) return;
     busy.current = true;
     setIsProcessingPayment(true);
@@ -1116,4 +1127,4 @@ export default function PosPage() {
       </Modal>
     </div></fieldset></>
   );
-}
+          }
