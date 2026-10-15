@@ -8,65 +8,12 @@ async function main() {
   console.log('Seeding RestroControl demo database...');
 
   // 1. Seed Plans
-  const plans = [
-    {
-      code: 'STARTER',
-      name: 'Starter Plan',
-      priceMonthly: 1499,
-      priceYearly: 14990,
-      maxOutlets: 1,
-      maxUsers: 3,
-      maxOrdersPerMonth: 1000,
-      hasAdvancedReports: false,
-      hasAiFeatures: false,
-      features: JSON.stringify(['1 Outlet', 'Up to 3 Users', '1,000 Orders/mo', 'POS & KOT', 'Recipe Engine', 'Basic Inventory']),
-    },
-    {
-      code: 'GROWTH',
-      name: 'Growth Plan',
-      priceMonthly: 2999,
-      priceYearly: 29990,
-      maxOutlets: 2,
-      maxUsers: 8,
-      maxOrdersPerMonth: 5000,
-      hasAdvancedReports: true,
-      hasAiFeatures: false,
-      features: JSON.stringify(['2 Outlets', 'Up to 8 Users', '5,000 Orders/mo', 'Full Inventory Ledger', 'Wastage Tracking', 'Variance Analytics']),
-    },
-    {
-      code: 'PRO',
-      name: 'Pro Kitchen',
-      priceMonthly: 4999,
-      priceYearly: 49990,
-      maxOutlets: 5,
-      maxUsers: 20,
-      maxOrdersPerMonth: 20000,
-      hasAdvancedReports: true,
-      hasAiFeatures: true,
-      features: JSON.stringify(['5 Outlets', 'Up to 20 Users', '20,000 Orders/mo', 'Purchase Orders', 'Stock Audits', 'Recipe Food Costing', 'All 20 Reports']),
-    },
-    {
-      code: 'MULTI_OUTLET',
-      name: 'Multi-Outlet Enterprise',
-      priceMonthly: 9999,
-      priceYearly: 99990,
-      maxOutlets: 25,
-      maxUsers: 100,
-      maxOrdersPerMonth: 100000,
-      hasAdvancedReports: true,
-      hasAiFeatures: true,
-      features: JSON.stringify(['25 Outlets', 'Unlimited Staff', '100,000 Orders/mo', 'Central Kitchen Transfers', 'Priority 24/7 SLA', 'Custom Integrations']),
-    },
-  ];
-
-  for (const plan of plans) {
-    await prisma.plan.upsert({
-      where: { code: plan.code },
-      create: plan,
-      update: plan,
-    });
+  const { catalogueRows } = require('./plan-catalog-data.cjs');
+  for (const plan of catalogueRows()) {
+    await prisma.plan.upsert({ where: { code: plan.code }, create: plan, update: plan });
   }
-  const proPlan = await prisma.plan.findUnique({ where: { code: 'PRO' } });
+  // Demo seed may create multiple outlets. Demo auth is disabled separately.
+  const proPlan = await prisma.plan.findUniqueOrThrow({ where: { code: 'WEBSITE_MULTI' } });
 
   // 2. Seed Restaurant "Demo Kitchen"
   const restaurant = await prisma.restaurant.upsert({
