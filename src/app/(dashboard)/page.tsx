@@ -1,7 +1,7 @@
 'use client';
 import { apiFetch } from '@/lib/api-fetch';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutlet } from './layout';
 import {
   TrendingUp,
@@ -27,21 +27,27 @@ export default function DashboardPage() {
   const { activeOutletId, user } = useOutlet();
   const [filter, setFilter] = useState('today');
   const [metrics, setMetrics] = useState<any>(null);
+  const requestSeq = useRef(0);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const fetchMetrics = async () => {
     if (!activeOutletId) return;
-    setLoading(true);
+    const seq = ++requestSeq.current;
+    setLoading(true); setError(''); setMetrics(null);
     try {
       const res = await apiFetch(activeOutletId, `/api/analytics/dashboard?outletId=${activeOutletId}&filter=${filter}`);
       const data = await res.json();
+      if (seq !== requestSeq.current) return;
+      if (!res.ok || !data.success) throw new Error(data.error || 'Metrics unavailable');
       if (data.success) {
         setMetrics(data);
       }
-    } catch {
-      // ignore
+    } catch (err: any) {
+      if (seq !== requestSeq.current) return;
+      setError(err.message || 'Could not load metrics');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   };
 
@@ -55,7 +61,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Executive Operations Dashboard
+            Dashboard
           </h1>
           <p className="text-xs text-slate-500 font-medium">
             Live sales, recipe consumption, actual inventory usage, and variance breakdown.
@@ -87,6 +93,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {error && <div role="alert" className="p-4 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl">{error}. Figures unavailable. Use Refresh Metrics to retry.</div>}
+      {loading && <p role="status" className="text-slate-500">Loading metrics...</p>}
+      {!loading && !error && metrics && <>
       {/* Core KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Sales */}
@@ -128,10 +137,10 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {metrics?.summary?.overallFoodCostPercent || 0}%
+            {metrics?.summary?.overallFoodCostPercent == null ? 'N/A' : `${metrics.summary.overallFoodCostPercent}%`}
           </div>
           <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">
-            Healthy benchmark (28-35%)
+            {metrics?.summary?.overallFoodCostPercent == null ? 'No sales in this period' : 'Estimated from current recipes'}
           </span>
         </div>
 
@@ -164,49 +173,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* CORE PROMISE HIGHLIGHT: Inventory Variance Widget */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Core Value Guarantee</span>
-            </div>
-            <h2 className="text-2xl font-black tracking-tight">
-              Expected vs. Actual Consumption Reconciliation
-            </h2>
-            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-              RestroControl automatically compares the theoretical recipe ingredients consumed from POS sales against real inventory movements to instantly uncover portion variations and stock discrepancies.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 bg-slate-800/80 p-4 rounded-2xl border border-slate-700/60 backdrop-blur-sm">
-            <div className="text-center px-4 border-r border-slate-700">
-              <span className="text-3xl font-black text-white">
-                {metrics?.varianceSummary?.totalTracked || 0}
-              </span>
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mt-1">
-                Ingredients Tracked
-              </span>
-            </div>
-            <div className="text-center px-4">
-              <span className="text-3xl font-black text-amber-400">
-                {metrics?.varianceSummary?.highVarianceCount || 0}
-              </span>
-              <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mt-1">
-                High Variance
-              </span>
-            </div>
-            <Link
-              href="/variance"
-              className="ml-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
-            >
-              <span>View Variance</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
+      <section className="bg-white border border-emerald-200 rounded-2xl p-5 space-y-4">
+        <div><p className="text-xs text-emerald-700 font-bold uppercase">Attention today</p>
+          <h2 className="text-xl font-bold text-slate-900 mt-1">Keep service moving</h2>
+          <p className="text-sm text-slate-500">Review the checks below for the selected period. Stock levels are current.</p></div>
+        <div className="grid sm:grid-cols-3 gap-3 text-sm">
+          <Link href="/inventory" className="p-4 bg-amber-50 rounded-xl"><strong className="block text-2xl">{metrics?.summary?.lowStockCount ?? 0}</strong> ingredients at or below minimum stock</Link>
+          <Link href="/variance" className="p-4 bg-emerald-50 rounded-xl"><strong className="block text-2xl">{metrics?.varianceSummary?.highVarianceCount ?? 0}</strong> high-variance ingredients</Link>
+          <Link href="/recipes" className="p-4 bg-slate-50 rounded-xl"><strong className="block text-2xl">{metrics?.lowMarginItems?.filter((i: any) => i.foodCostPercentage > 35).length ?? 0}</strong> high-cost dishes in recipe watchlist</Link>
         </div>
-      </div>
+      </section>
 
       {/* Middle Grid: Low Stock Alert & Top Selling Items */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -226,7 +202,7 @@ export default function DashboardPage() {
             <div className="divide-y divide-slate-100 mt-2">
               {!metrics?.lowStockItems || metrics.lowStockItems.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
-                  All ingredients are currently above safe minimum levels.
+                  {metrics?.summary?.inventoryItemCount === 0 ? 'No inventory configured yet. Add ingredients and opening stock to start monitoring.' : 'Tracked ingredients are currently above their minimum levels.'}
                 </div>
               ) : (
                 metrics.lowStockItems.map((item: any) => (
@@ -381,6 +357,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+    </>}
     </div>
   );
 }
