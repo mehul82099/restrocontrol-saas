@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import StaffInvitePanel from '@/components/users/StaffInvitePanel';
 import { formatDate } from '@/lib/utils';
 
 interface UserRecord {
   id: string;
   name: string;
   email: string;
-  role: 'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER';
+  role: 'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER' | 'WAITER';
   phone?: string;
   isActive: boolean;
   createdAt: string;
@@ -42,6 +43,11 @@ const ROLE_PERMISSIONS: { [key: string]: { title: string; desc: string; access: 
     title: 'POS Cashier',
     desc: 'Front-of-house billing, taking orders, split payments, receipts, and customer CRM',
     access: ['POS Terminal', 'Dine-in / Takeaway / Delivery', 'Split Payments (Cash, Card, UPI)', 'Receipt Printing', 'Customer Directory'],
+  },
+  WAITER: {
+    title: 'Waiter',
+    desc: 'Takes and updates table orders on the POS',
+    access: ['POS Terminal', 'Dine-in orders'],
   },
   KITCHEN_STAFF: {
     title: 'Kitchen Staff',
@@ -64,7 +70,7 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER'>('CASHIER');
+  const [role, setRole] = useState<'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER' | 'WAITER'>('CASHIER');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('Password123!');
   const [saving, setSaving] = useState(false);
@@ -144,6 +150,8 @@ export default function UsersPage() {
           </button>
         </div>
       </div>
+
+      <StaffInvitePanel onJoined={fetchUsers} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
