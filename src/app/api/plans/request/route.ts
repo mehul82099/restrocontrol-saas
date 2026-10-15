@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recent = await prisma.auditLog.findMany({ where: { restaurantId: auth.restaurantId, userId: auth.user.userId, action: 'PLAN_ACTIVATION_REQUEST', createdAt: { gte: since } }, take: 50, orderBy: { createdAt: 'desc' } });
     const duplicate = recent.some(log => { try { return JSON.parse(log.after || '{}').planCode === plan.code; } catch { return false; } });
-    if (!duplicate) await AuditService.log({ restaurantId: auth.restaurantId, userId: auth.user.userId, action: 'PLAN_ACTIVATION_REQUEST', entity: 'Subscription', after: { planCode: plan.code, displayedPriceInr: plan.price, billingFrequency: 'MONTHLY', email: auth.user.email, paymentStatus: 'NOT_CONNECTED' }, ipAddress: req.headers.get('x-forwarded-for') || null, userAgent: req.headers.get('user-agent') });
+    if (!duplicate) await prisma.$transaction(async tx => AuditService.log({ restaurantId: auth.restaurantId, userId: auth.user.userId, action: 'PLAN_ACTIVATION_REQUEST', entity: 'Subscription', after: { planCode: plan.code, displayedPriceInr: plan.price, billingFrequency: 'MONTHLY', email: auth.user.email, paymentStatus: 'NOT_CONNECTED' }, ipAddress: req.headers.get('x-forwarded-for') || null, userAgent: req.headers.get('user-agent') }, tx));
     return NextResponse.json({ success: true, pendingBilling: true });
   } catch { return NextResponse.json({ success: false, error: 'Plan request could not be saved.' }, { status: 400 }); }
 }
