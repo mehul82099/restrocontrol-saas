@@ -1,3 +1,4 @@
+import { prisma } from '@/server/db/prisma';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
@@ -23,7 +24,10 @@ async function handlePOST(req: NextRequest) {
       cashierId: auth.user.userId,
     } as CreateOrderInput);
 
+    const receiptRestaurant = await prisma.restaurant.findUnique({ where: { id: auth.restaurantId },
+      select: { name: true, taxNumber: true, address: true, phone: true } });
     return NextResponse.json({
+      receiptRestaurant,
       success: true,
       ...orderResult,
     });
