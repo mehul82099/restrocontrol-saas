@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WorldAuthShell from '@/components/world/WorldAuthShell';
@@ -8,10 +8,23 @@ import { Scale, Lock, Mail, ArrowRight, ShieldCheck, CheckCircle } from 'lucide-
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('owner@demokitchen.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [googleOn, setGoogleOn] = useState(false);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    const messages: Record<string, string> = {
+      google_unavailable: 'Google sign-in is not available yet. Use your email and password.',
+      google_no_account: 'No RestroControl account uses this Google email. Start a free trial first, or sign in with email.',
+      already_registered: 'This email is already registered. Sign in with Google or your email and password.',
+      google_failed: 'Google sign-in could not be completed. Please try again or use your email.',
+    };
+    if (code && messages[code]) setError(messages[code]);
+    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleOn(!!d.google)).catch(() => {});
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -31,7 +44,9 @@ export default function LoginPage() {
       }
 
       // Route according to primary role
-      if (data.user.role === 'CASHIER') {
+      if (data.user.role === 'WAITER') {
+        router.push('/waiter');
+      } else if (data.user.role === 'CASHIER') {
         router.push('/pos');
       } else if (data.user.role === 'KITCHEN_STAFF') {
         router.push('/kot');
@@ -45,11 +60,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const setDemoRole = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('password123');
   };
 
   return (
@@ -86,7 +96,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@demokitchen.com"
+                placeholder="name@restaurant.com"
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-300 rounded-xl text-stone-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-stone-400"
               />
             </div>
@@ -130,69 +140,17 @@ export default function LoginPage() {
           <Link href="/signup" className="text-emerald-600 font-bold hover:underline">Start a 14-day free trial</Link>
         </p>
 
-        {/* 1-Click Demo Accounts */}
-        <div className="mt-8 pt-6 border-t border-stone-200">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-3 text-center">
-            Quick 1-Click Demo Logins
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setDemoRole('owner@demokitchen.com')}
-              className={`p-2 rounded-xl border text-left transition-colors ${
-                email === 'owner@demokitchen.com'
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                  : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-900'
-              }`}
+        {googleOn && (
+          <div className="mt-6 pt-5 border-t border-stone-200">
+            <a
+              href="/api/auth/google/start"
+              className="w-full py-3 bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all"
             >
-              👑 Owner
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoRole('manager@demokitchen.com')}
-              className={`p-2 rounded-xl border text-left transition-colors ${
-                email === 'manager@demokitchen.com'
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                  : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-900'
-              }`}
-            >
-              👔 Manager
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoRole('cashier@demokitchen.com')}
-              className={`p-2 rounded-xl border text-left transition-colors ${
-                email === 'cashier@demokitchen.com'
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                  : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-900'
-              }`}
-            >
-              💵 Cashier (POS)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoRole('kitchen@demokitchen.com')}
-              className={`p-2 rounded-xl border text-left transition-colors ${
-                email === 'kitchen@demokitchen.com'
-                  ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                  : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-900'
-              }`}
-            >
-              👨‍🍳 Kitchen (KDS)
-            </button>
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+              <span>Continue with Google</span>
+            </a>
           </div>
-          <button
-            type="button"
-            onClick={() => setDemoRole('inventory@demokitchen.com')}
-            className={`w-full mt-2 p-2 rounded-xl border text-center transition-colors text-xs ${
-              email === 'inventory@demokitchen.com'
-                ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                : 'border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-900'
-            }`}
-          >
-            📦 Inventory Manager
-          </button>
-        </div>
+        )}
     </WorldAuthShell>
   );
 }
