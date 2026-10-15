@@ -127,8 +127,11 @@ export default function DashboardLayout({
                 </button>
                 <button
                   onClick={async () => {
-                    await fetch('/api/auth/logout', { method: 'POST' });
-                    router.push('/login');
+                    try {
+                      const result = await fetch('/api/auth/logout', { method: 'POST' });
+                      if (!result.ok) throw new Error('Logout failed');
+                      router.push('/login');
+                    } catch { alert('Check-out could not be recorded. Please retry Logout.'); }
                   }}
                   className="mt-6 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800"
                 >
