@@ -371,7 +371,7 @@ export class AnalyticsService {
       }
     }
 
-    const overallFoodCostPercent = totalSales > 0 ? Math.round((totalEstimatedFoodCost / totalSales) * 1000) / 10 : 30;
+    const overallFoodCostPercent = totalSales > 0 ? Math.round((totalEstimatedFoodCost / totalSales) * 1000) / 10 : null;
     const overallGrossContribution = Math.round((totalSales - totalEstimatedFoodCost) * 100) / 100;
 
     // 6. Top-selling items
@@ -416,6 +416,7 @@ export class AnalyticsService {
         overallGrossContribution,
         totalWastageCost: Math.round(totalWastageCost * 100) / 100,
         lowStockCount: lowStockItems.length,
+        inventoryItemCount: outletInventories.length,
       },
       lowStockItems,
       varianceSummary: {
