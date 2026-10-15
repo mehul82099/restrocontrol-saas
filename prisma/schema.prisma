@@ -214,10 +214,11 @@ model Plan {
   name               String
   code               String   @unique
   priceMonthly       Float    @default(0)
-  priceYearly        Float    @default(0)
-  maxOutlets         Int      @default(1)
-  maxUsers           Int      @default(5)
-  maxOrdersPerMonth  Int      @default(1000)
+  priceYearly        Float?   // null = no annual offer
+  maxOutlets         Int?     // null = unlimited
+  maxUsers           Int?     // null = unlimited
+  maxOrdersPerMonth  Int?     // null = unlimited
+  isAvailable        Boolean  @default(true)
   hasAdvancedReports Boolean  @default(false)
   hasAiFeatures      Boolean  @default(false)
   features           String?  // JSON string
