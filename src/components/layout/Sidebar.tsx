@@ -48,10 +48,10 @@ export function Sidebar({ userRole = 'OWNER', open = false, onClose = () => {} }
     {
       title: 'POS & KITCHEN',
       items: [
-        { name: 'Point of Sale (POS)', href: '/pos', icon: Store, roles: ['OWNER', 'MANAGER', 'CASHIER'] },
+        { name: 'Point of Sale (POS)', href: '/pos', icon: Store, roles: ['OWNER', 'MANAGER', 'CASHIER', 'WAITER'] },
         { name: 'Kitchen Display (KDS)', href: '/kot', icon: ChefHat, roles: ['OWNER', 'MANAGER', 'KITCHEN_STAFF'] },
-        { name: 'Dining Tables', href: '/tables', icon: UtensilsCrossed, roles: ['OWNER', 'MANAGER', 'CASHIER'] },
-        { name: 'Orders & Bills', href: '/orders', icon: Receipt, roles: ['OWNER', 'MANAGER', 'CASHIER'] },
+        { name: 'Dining Tables', href: '/tables', icon: UtensilsCrossed, roles: ['OWNER', 'MANAGER', 'CASHIER', 'WAITER'] },
+        { name: 'Orders & Bills', href: '/orders', icon: Receipt, roles: ['OWNER', 'MANAGER', 'CASHIER', 'WAITER'] },
       ],
     },
     {
