@@ -88,6 +88,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'manage:orders',
     'view:inventory',
   ],
+  WAITER: [
+    'access:pos',
+    'manage:orders',
+  ],
   KITCHEN_STAFF: [
     'access:kot',
     'update:kot_status',
