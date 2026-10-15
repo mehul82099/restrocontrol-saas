@@ -13,5 +13,5 @@ export const GET = protectRead(async (req: NextRequest) => {
   const {auth, errorResponse} = await authenticateRequest(new NextRequest(req.url, {headers}));
   if (!auth || errorResponse) return errorResponse;
   if (auth.restaurantId !== row.restaurantId || auth.user.userId !== row.userId || !orderAudience(auth.user.role)) return new NextResponse(null, {status: 403});
-  return NextResponse.json({success: true, url: auth.user.role === 'KITCHEN_STAFF' ? '/kot' : '/orders'});
+  return NextResponse.json({success: true, url: `${auth.user.role === 'KITCHEN_STAFF' ? '/kot' : '/orders'}?outletId=${encodeURIComponent(row.outletId)}`});
 });
