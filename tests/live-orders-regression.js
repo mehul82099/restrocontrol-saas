@@ -83,6 +83,7 @@ async function main() {
  const {hasPermission}=jiti('../src/server/auth/permissions');
  const {POST: waiterOrder,GET: readyTickets}=jiti('../src/app/api/waiter/orders/route');
  const {GET: waiterCatalog}=jiti('../src/app/api/waiter/catalog/route');
+ const {GET: notifications,POST: changeNotifications}=jiti('../src/app/api/notifications/route');
  const {GET: allOrders}=jiti('../src/app/api/orders/route');
  const {GET: dashboard}=jiti('../src/app/api/analytics/dashboard/route');
  const {POST: checkout}=jiti('../src/app/api/pos/checkout/route');
@@ -96,6 +97,7 @@ async function main() {
  const input=()=>({idempotencyKey:'WAITER-'+waiter.id+'-'+require('crypto').randomUUID(),orderType:'TAKEAWAY',items:[{menuItemId:dish.id,quantity:1}]});
  let placed;
  await test('Waiter permissions are only limited order entry and ready tickets',async()=>{assert.equal(hasPermission('WAITER','access:waiter'),true);for(const permission of ['access:pos','manage:orders','refund:order','cancel:order','access:kot','update:kot_status','view:analytics','view:reports','manage:users'])assert.equal(hasPermission('WAITER',permission),false,permission);});
+ await test('Waiter cannot read or mark private inventory notifications',async()=>{assert.deepEqual((await (await notifications(waiterReq('/api/notifications'))).json()).notifications,[]);assert.equal((await changeNotifications(waiterReq('/api/notifications','POST',{action:'mark_all_read'}))).status,403);});
  await test('Waiter catalog omits customer/recipe/cost data',async()=>{const response=await waiterCatalog(waiterReq('/api/waiter/catalog'));assert.equal(response.status,200);const data=await response.json();assert.deepEqual(Object.keys(data).sort(),['items','success','tables']);for(const item of data.items)assert.deepEqual(Object.keys(item).sort(),['basePrice','id','name','taxRate']);});
  await test('Waiter creates unpaid order and retry is idempotent',async()=>{const body=input();const response=await waiterOrder(waiterReq('/api/waiter/orders','POST',body));assert.equal(response.status,200);const data=await response.json();placed=await prisma.order.findFirst({where:{orderNumber:data.orderNumber}});assert.equal(placed.restaurantId,restaurant.id);assert.equal(placed.outletId,outlet.id);assert.equal(placed.paymentStatus,'PENDING');assert.equal(placed.paidAmount,0);assert.equal((await (await waiterOrder(waiterReq('/api/waiter/orders','POST',body))).json()).isDuplicate,true);});
  await test('Waiter cannot record payment, discounts, customer access or arbitrary retry IDs',async()=>{for(const extra of [{payments:[{amount:100,paymentMethod:'CASH'}]},{discountAmount:1},{tipAmount:1},{customerId:'not-allowed'},{idempotencyKey:'other-person-key'}])assert.equal((await waiterOrder(waiterReq('/api/waiter/orders','POST',{...input(),...extra}))).status,400);});
