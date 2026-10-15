@@ -13,7 +13,8 @@
     "test": "node tests/reliability-regression.js && node tests/suite.js",
     "test:security": "node tests/security-regression.js",
     "typecheck": "tsc --noEmit",
-    "test:reliability": "node tests/reliability-regression.js"
+    "test:reliability": "node tests/reliability-regression.js",
+    "test:auth": "node tests/auth-google-demo.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
