@@ -833,3 +833,24 @@ model RefundRequest {
   @@unique([restaurantId, paymentReference])
   @@index([status, submittedAt])
 }
+
+// Isolated Razorpay TEST bookkeeping. Never read for production entitlements.
+model TestBillingSubscription {
+  id                 String @id @default(uuid())
+  restaurantId       String @unique
+  providerId         String? @unique
+  planCode           String
+  pendingPlanCode    String?
+  providerStatus     String @default("CREATING")
+  checkoutVerifiedAt DateTime?
+  currentStart       Int?
+  currentEnd         Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+model TestBillingEvent {
+  eventId       String @id
+  providerId    String
+  eventType     String
+  receivedAt    DateTime @default(now())
+}
