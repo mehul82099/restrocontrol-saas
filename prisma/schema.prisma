@@ -810,3 +810,20 @@ model AuditLog {
 
   @@index([restaurantId, action, createdAt])
 }
+
+// Browser capabilities are private. Bind to a specific login, tenant and outlet.
+model StaffPushSubscription {
+  id           String @id @default(uuid())
+  endpoint     String @unique
+  p256dh       String
+  auth         String
+  userId       String
+  restaurantId String
+  outletId     String
+  sessionHash  String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@index([restaurantId, outletId, expiresAt])
+  @@index([sessionHash])
+}
