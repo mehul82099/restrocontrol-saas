@@ -54,6 +54,7 @@ export default function DashboardLayout({
       }
       const data = await res.json();
       if (data.success) {
+        if (data.user.role === 'WAITER' && pathname !== '/waiter') router.replace('/waiter');
         setUser(data.user);
         setTrial(data.trial || null);
         if (!activeOutletId) {
