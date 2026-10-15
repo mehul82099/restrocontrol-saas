@@ -1,25 +1,28 @@
-# Plan reconciliation: review required, not executed
+# Plan reconciliation: code prepared, production unchanged
 
-The owner requested replacement of the legacy Rs 1,499/2,999/4,999/9,999 offer with four choices: Rs 499 one outlet, Rs 699 two or more outlets, Rs 699 app + website (upcoming), Rs 999 app + website with two or more outlets (upcoming).
+Confirmed website subscriptions: Rs 499/month for one outlet, Rs 699/month for unlimited outlets. Both have unlimited staff and monthly orders. Rs 699 app + website and Rs 999 app + website multi-outlet remain Upcoming and cannot be requested or assigned.
 
-The current database schema only has monthly/yearly prices and mandatory integer quota fields. Monthly cadence is confirmed. The Rs 699 website plan has unlimited outlets and staff. Monthly order limits, the Rs 499 staff cap and feature entitlements are not confirmed. Do not insert guessed limits, an unlimited sentinel, a free price or a monthly interpretation to make the schema accept unresolved terms.
+## Model and seed
 
-## Prepared code
+`src/lib/plan-catalog.json` is the shared source for UI, server seed and migration. `null` quotas mean genuinely unlimited, never a large magic integer. `priceYearly=null` means no annual offer. `isAvailable=false` blocks upcoming plan entitlements even if a bad assignment is attempted. App-plan quotas carry no purchasable rights while unavailable; review entitlements before launch.
 
-`scripts/reconcile-plan-catalog.cjs` compiles the exact catalogue only after an explicit reviewed configuration supplies monthly cadence and every quota/feature entitlement. With a configuration path it defaults to a read-only dry run. It lists existing accounts not assigned to a new plan. `--apply` rejects all non-local database hosts. This is migration preparation, not a production migration route.
+`prisma/review-migrations/20261015_plan_unlimited.sql` makes Plan quotas/yearly price nullable and adds availability. It changes no existing values, subscriptions or customer records. It is not run by build/install/startup. Do not run Prisma schema push or the demo seed against production as part of preview work.
 
-There are no executable business defaults in the repository. Tests use clearly synthetic quotas only. To run the compiler tests: `node tests/plan-migration-regression.cjs`.
+Both seeding entry points now use the four-plan catalogue; signup uses WEBSITE_SINGLE instead of PRO. Reads no longer auto-create an ACTIVE subscription. Missing subscription state derives a trial end from restaurant creation, not a fresh trial on each read. Existing legacy subscriptions keep their data and access until explicitly mapped.
 
-The reviewed configuration must contain `billingFrequency`, `monthlyCadenceConfirmed`, `quotas` keyed by the four catalogue codes, and optional `restaurantAssignments` keyed by each exact restaurant ID. Every quota needs `maxOutlets`, `maxUsers`, `maxOrdersPerMonth`, `hasAdvancedReports` and `hasAiFeatures`. Do not assume an old tier maps to a new one because its name resembles it. Accounts with more than one outlet cannot be assigned to the one-outlet plan. Upcoming app plans cannot receive subscriptions.
+## Dry run and local migration test
 
-## Remaining launch work
+`scripts/reconcile-plan-catalog.cjs` defaults to a read-only dry run. Optional `--config=/path/reviewed.json` contains `restaurantAssignments`, an object mapping exact restaurant IDs to WEBSITE_SINGLE or WEBSITE_MULTI. There is no guessed mapping from old tier names. Upcoming app plans and assignments exceeding the one-outlet quota are rejected. It never deletes legacy plans or changes status, billing periods, mandates or payments.
 
-- Obtain the remaining order/staff decisions. The confirmed uncapped outlets/staff for the Rs 699 website plan must be represented explicitly with reviewed nullable-schema/service changes instead of a magic integer. The current compiler intentionally refuses an invented integer substitute and is not ready to apply that plan yet.
-- Replace both legacy seeding entry points (`SubscriptionService.seedStandardPlans` and `scripts/seed.js`) and register's old `PRO` lookup together. Do not remove the old lookup while signup still depends on it.
-- Disable annual billing explicitly before using the new monthly catalogue. `priceYearly=0` is not an annual offer.
-- Dry-run on an isolated database copied without real customer secrets; review per-restaurant assignments, seat/outlet compatibility and preservation of records.
-- Add DB-backed migration, entitlement, expiry, upgrade and signup tests. Current compiler tests do not replace them.
-- Only after explicit publish approval, take a supported backup, use a separately reviewed production migration procedure and verify results. No production mutation has been run by this change.
-- Connect/test Razorpay and webhook-backed lifecycle before any plan activates from payment. This script never changes subscription status, billing periods, mandates or payments.
+`--apply` rejects all non-local database hosts. It is for isolated test databases only; production migration needs a separately reviewed procedure, backup and explicit publish approval. A serializable transaction rechecks outlet counts before assignments. Unmapped restaurants are listed for review, not silently changed.
 
-Legacy records remain intact until a safe mapping is approved. The preview hides legacy prices as new offers. Actual reconciliation is not yet complete.
+Tests: `node tests/plan-migration-regression.cjs` validates the catalogue. DB-backed reconciliation/entitlement tests must use an isolated local database. Production data has not been altered.
+
+## Release checklist
+
+- Integrate the register change with the separate Google-auth PR, and Plan schema changes with the waiter/push PR. Regenerate Prisma and rerun all relevant tests on the combined branch.
+- Apply reviewed schema SQL on an isolated preview DB, seed the catalogue and test signup, one-outlet enforcement, unlimited staff/orders, denied upcoming plans, expiry and unchanged legacy records.
+- Review each existing restaurant assignment using actual outlet counts. Keep paid plan/status/period migration separate from payment verification. Never activate a subscription solely because its plan was selected.
+- Keep annual billing disabled. Connect and test Razorpay test keys, plan IDs and verified webhook lifecycle before charging or enabling an upgrade.
+- Finalise refund processing time and remaining legal/privacy details before policy publication. Hosted previews do not finalize the terms.
+- Only after explicit publish approval and a supported backup, run a separately reviewed production migration and verify outcomes. Do not reuse the local-only apply command to bypass this gate.
