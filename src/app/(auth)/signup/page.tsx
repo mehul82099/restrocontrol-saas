@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import WorldAuthShell from '@/components/world/WorldAuthShell';
 import { Scale, ArrowRight } from 'lucide-react';
 
 const inputClass =
-  'w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-500';
-const labelClass = 'block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5';
+  'w-full px-4 py-2.5 bg-white border border-stone-300 rounded-xl text-stone-900 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-stone-400';
+const labelClass = 'block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -40,21 +41,19 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10">
+    <WorldAuthShell>
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-xl shadow-emerald-950/50 mb-3">
             <Scale className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Start your <span className="text-emerald-400">14-day free trial</span>
+          <h1 className="text-2xl font-black text-stone-900 tracking-tight">
+            Start your <span className="text-emerald-600">14-day free trial</span>
           </h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">Register your restaurant. No card needed.</p>
+          <p className="text-xs text-stone-500 font-medium mt-1">Register your restaurant. No card needed.</p>
         </div>
 
         {error && (
-          <div className="mb-5 p-3 bg-rose-950/50 border border-rose-800/60 rounded-xl text-xs text-rose-300 font-medium">{error}</div>
+          <div className="mb-5 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,7 +76,7 @@ export default function SignupPage() {
           <div>
             <label className={labelClass}>Password</label>
             <input type="password" className={inputClass} required minLength={10} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} />
-            <p className="text-[11px] text-slate-500 mt-1">At least 10 characters, with a letter and a number.</p>
+            <p className="text-[11px] text-stone-500 mt-1">At least 10 characters, with a letter and a number.</p>
           </div>
           <button
             type="submit"
@@ -95,11 +94,10 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="text-xs text-slate-400 text-center mt-6">
+        <p className="text-xs text-stone-500 text-center mt-6">
           Already have an account?{' '}
-          <Link href="/login" className="text-emerald-400 font-bold hover:underline">Sign in</Link>
+          <Link href="/login" className="text-emerald-600 font-bold hover:underline">Sign in</Link>
         </p>
-      </div>
-    </div>
+    </WorldAuthShell>
   );
 }

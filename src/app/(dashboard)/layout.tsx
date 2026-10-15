@@ -4,6 +4,9 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import dynamic from 'next/dynamic';
+
+const Landing = dynamic(() => import('@/components/world/Landing'));
 
 interface OutletContextType {
   activeOutletId: string;
@@ -32,6 +35,7 @@ export default function DashboardLayout({
   const [trial, setTrial] = useState<any>(null);
   const [activeOutletId, setActiveOutletId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [guest, setGuest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -42,7 +46,9 @@ export default function DashboardLayout({
     try {
       const res = await fetch('/api/auth/me');
       if (res.status === 401) {
-        router.push('/login');
+        // Signed-out visitors on "/" see the public landing page
+        if (pathname === '/') setGuest(true);
+        else router.push('/login');
         return;
       }
       const data = await res.json();
@@ -76,6 +82,8 @@ export default function DashboardLayout({
       </div>
     );
   }
+
+  if (guest) return <Landing />;
 
   // POS screen can be viewed in ultra-clean full-width mode, but keeps layout available
   return (
