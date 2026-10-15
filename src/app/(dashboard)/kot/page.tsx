@@ -114,7 +114,7 @@ export default function KotPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400">
-            Auto-refreshing (every 5s) • Updated {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}
+            Automatic order updates • Updated {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}
           </span>
           <button
             onClick={fetchTickets}
