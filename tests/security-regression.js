@@ -45,6 +45,19 @@ async function main() {
  let order;
  await test('Catalog replaces caller prices and names',async()=>{const result=await OrderService.createOrder(orderInput());order=result.order;assert.equal(result.items[0].unitPrice,dish.basePrice);assert.equal(result.items[0].name,dish.name);assert.equal(order.totalAmount,total);});
  await test('Cross-tenant idempotency cannot return data',async()=>{const key=`SEC-${Date.now()}`;const a=orderInput();a.idempotencyKey=key;await OrderService.createOrder(a);await assert.rejects(()=>OrderService.createOrder({...a,restaurantId:foreign.id,outletId:foreignOutlet.id}));});
+ await test('Concurrent same-key checkout creates one order and one stock deduction', async()=>{
+   const a=orderInput();a.idempotencyKey=`SEC-CONCURRENT-${Date.now()}`;
+   const results=await Promise.allSettled([OrderService.createOrder(structuredClone(a)),OrderService.createOrder(structuredClone(a))]);
+   const good=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+   assert.ok(good.length>=1,'At least one request must commit');
+   const retry=await OrderService.createOrder(structuredClone(a));
+   assert.ok(good.every(r=>r.order.id===retry.order.id));
+   assert.equal(await prisma.order.count({where:{idempotencyKey:a.idempotencyKey}}),1);
+   assert.equal(await prisma.kitchenOrder.count({where:{orderId:retry.order.id}}),1);
+   const movements=await prisma.inventoryMovement.count({where:{referenceId:retry.order.id}});
+   await OrderService.createOrder(structuredClone(a));
+   assert.equal(await prisma.inventoryMovement.count({where:{referenceId:retry.order.id}}),movements);
+ });
  await test('Foreign ingredient cannot corrupt stock',async()=>{await assert.rejects(()=>InventoryService.recordMovement({restaurantId:foreign.id,outletId:foreignOutlet.id,ingredientId:ingredient.id,quantity:1,movementType:'ADJUSTMENT'}));});
  await test('Inventory grams normalize to KG',async()=>{const before=await prisma.outletInventory.findUnique({where:{outletId_ingredientId:{outletId:outlet.id,ingredientId:ingredient.id}}});const r=await InventoryService.recordMovement({restaurantId:restaurant.id,outletId:outlet.id,ingredientId:ingredient.id,quantity:1000,unit:'G',movementType:'ADJUSTMENT'});assert.equal(r.movement.quantity,1);assert.ok(Math.abs(r.outletInventory.currentStock-before.currentStock-1)<1e-6);});
  await test('Incompatible units rejected',async()=>{assert.throws(()=>UnitConverter.convert(1,'KG','L'));assert.throws(()=>UnitConverter.convert(1,'BUCKET','KG'));});
