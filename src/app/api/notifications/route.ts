@@ -8,6 +8,7 @@ async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
   if (errorResponse || !auth) return errorResponse;
 
+  if (auth.user.role === 'WAITER') return NextResponse.json({success: true, notifications: []});
   const notifications = await NotificationService.getNotifications(auth.restaurantId, auth.outletId);
   return NextResponse.json({ success: true, notifications });
 }
@@ -16,6 +17,7 @@ async function handlePOST(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
   if (errorResponse || !auth) return errorResponse;
 
+  if (auth.user.role === 'WAITER') return NextResponse.json({success: false}, {status: 403});
   const data = await req.json();
   if (data.action === 'mark_all_read') {
     await NotificationService.markAllAsRead(auth.restaurantId, auth.outletId);
