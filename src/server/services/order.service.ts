@@ -318,10 +318,21 @@ export class OrderService {
         consumption: consumptionPlan,
         isDuplicate: false,
       };
-    }, serializable);
+    }, serializable).catch(async (error) => {
+      // Another request may have committed this key after our initial lookup.
+      if (idempotencyKey && ['P2002', 'P2034'].includes(error.code)) {
+        const existing = await prisma.order.findUnique({ where: { idempotencyKey },
+          include: { items: true, payments: true, kitchenOrder: { include: { items: true } } } });
+        if (existing && existing.restaurantId === restaurantId && existing.outletId === outletId)
+          return { order: existing, items: existing.items, kot: existing.kitchenOrder!, consumption: [], isDuplicate: true };
+      }
+      throw error;
+    });
 
     // Invalidate dashboard caches for this outlet
-    await cache.invalidatePattern(`dashboard:${restaurantId}:${outletId}:*`);
+    await cache.invalidatePattern(`dashboard:${restaurantId}:${outletId}:*`).catch(() => {
+      console.error('Dashboard cache invalidation failed after committed order');
+    });
 
     return result;
   }

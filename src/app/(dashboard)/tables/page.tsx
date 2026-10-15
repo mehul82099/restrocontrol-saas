@@ -266,7 +266,7 @@ export default function TablesPage() {
 
                 <div className="mt-4 pt-3 border-t border-slate-100">
                   <Link
-                    href={`/pos?tableId=${tbl.id}`}
+                    href={hasActiveOrder ? '/orders' : `/pos?tableId=${tbl.id}`}
                     className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       hasActiveOrder
                         ? 'bg-slate-900 hover:bg-slate-800 text-white'
@@ -274,7 +274,7 @@ export default function TablesPage() {
                     }`}
                   >
                     <Store className="w-3.5 h-3.5" />
-                    {hasActiveOrder ? 'View / Add to Bill' : 'Open POS Ticket'}
+                    {hasActiveOrder ? 'View bill in Orders' : 'Open POS Ticket'}
                   </Link>
                 </div>
               </div>
