@@ -4,8 +4,8 @@ Production must not be changed until the owner approves publishing.
 
 ## What works without new services
 
-- The signed-in dashboard checks an authenticated, tenant/outlet-scoped revision every four seconds while visible, every 30 seconds while hidden. It catches up on reconnect/focus, backs off after failures, and shows a stale/reconnecting notice.
-- Changed revisions refresh the order list, kitchen board, owner/manager metrics, and POS table availability without resetting carts, held orders or payment state. A short in-app popup signals order activity. The initial load does not replay old activity.
+- Push is the fast update signal. The signed-in dashboard uses a 2-minute fallback check while visible and online, or a 5-minute safety check when push is enabled. Hidden and offline pages stop checking. Focus/reconnect/push signals schedule a check, with a minimum 15-second gap to coalesce bursts. Failures back off to a maximum 15 minutes. A reconnecting/stale notice stays visible after errors. Without push, changes can take up to 2 minutes to appear under normal conditions; browser throttling or network failures can take longer.
+- Changed revisions refresh the order list, kitchen board, owner/manager metrics, and POS table availability without resetting carts, held orders or payment state. A short in-app popup signals order activity. Unchanged checks never reload dashboard/order/catalog data. The notification bell refreshes on initial load and when opened, not every 20 seconds. The initial load does not replay old activity.
 - This is near-live automatic refresh, not a persistent WebSocket connection or a guarantee of instant delivery. No paid pub/sub service or Redis is required. Database/serverless usage still counts toward the host's free allowances; monitor usage before scaling.
 - Owner, Manager, Cashier and Kitchen Staff receive order activity. The approved Waiter role uses a dedicated unpaid order-entry and ready-ticket screen. It cannot take payments, issue refunds/cancellations, change kitchen statuses, view full bill history or see sales reports. Waiter background alerts are sent only when a ticket becomes READY.
 
@@ -40,3 +40,16 @@ Database-dependent tests refuse a non-local database. Test VAPID keys are genera
 ## Waiter schema update
 
 Apply `ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'WAITER';` to the isolated preview database before assigning a waiter. The production enum must remain untouched until publish approval. The waiter API rechecks the current role and outlet assignment on every request.
+
+## Free-tier operation budget
+
+The revision endpoint makes exactly one parameterized SQL operation per valid check. That same statement verifies the JWT-bound active user, current role, trial and assigned active outlet before returning a digest. Invalid JWTs make zero database calls. No staff permission cache weakens revocation. Order and kitchen aggregates are restricted to the authorized outlet; waiters receive only a digest of ready tickets.
+
+Steady visible usage example, calculated as 5 devices × 8 hours/day × 30 days:
+- 2-minute fallback: 36,000 revision operations/month.
+- Push enabled, 5-minute safety checks: 14,400 revision operations/month, plus event-triggered checks.
+- Previous 4-second loop: 1,080,000 revision requests/month before its multiple authority/data queries, and before the separate 20-second header loop.
+
+These are incremental revision counts, not a full application budget or guaranteed provider invoice count. Initial loads, focus events, multiple tabs, push validation/dispatch, changed-screen data loads, orders, reports and writes also consume operations. Five devices kept visible 24 hours/day already use 108,000 fallback checks/month. More restaurants/devices multiply usage. This does not guarantee the whole application fits 100K. Review provider usage during a real shift and retain headroom before publish. No paid service or automatic upgrade is installed. Database storage and compute limits still apply; SQL aggregates scan outlet order history, so a large history may eventually need durable revision counters or another update service.
+
+The browser owns its timers and background push support. Push remains best effort, can be dropped or delayed, and has not been certified on a real closed-page phone. The slower polling fallback is a deliberate free-tier trade-off, not instantaneous realtime. Hidden pages catch up when visible again; they do not run a hidden safety poll. Multiple simultaneously visible tabs currently each have their own fallback checks.
