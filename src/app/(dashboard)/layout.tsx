@@ -57,7 +57,9 @@ export default function DashboardLayout({
         setUser(data.user);
         setTrial(data.trial || null);
         if (!activeOutletId) {
-          setActiveOutletId(data.user.activeOutletId || data.user.outlets?.[0]?.id || '');
+          const requestedOutlet = new URLSearchParams(window.location.search).get('outletId');
+          const linkedOutlet = data.user.outlets?.find((outlet: any) => outlet.id === requestedOutlet);
+          setActiveOutletId(linkedOutlet?.id || data.user.activeOutletId || data.user.outlets?.[0]?.id || '');
         }
       } else {
         router.push('/login');
