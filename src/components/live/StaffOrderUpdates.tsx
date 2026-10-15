@@ -21,7 +21,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState('');
-  const allowed = ['OWNER', 'MANAGER', 'CASHIER', 'KITCHEN_STAFF'].includes(user?.role);
+  const allowed = ['OWNER', 'MANAGER', 'CASHIER', 'KITCHEN_STAFF', 'WAITER'].includes(user?.role);
 
   useEffect(() => {
     if (!allowed || !outletId) return;
@@ -40,7 +40,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
         const data = await res.json();
         if (!data.success || !data.revision) throw new Error();
         if (stopped) return;
-        if (revision && data.revision !== revision) { emit(); setToast('Order activity updated'); }
+        if (revision && data.revision !== revision) { emit(); setToast(user?.role === 'WAITER' ? 'Ready-to-serve tickets updated' : 'Order activity updated'); }
         // Also catch up after a temporary outage without replaying old notifications.
         if (failures || Date.now() - lastRefreshAt >= 30000) { emit(); lastRefreshAt = Date.now(); }
         revision = data.revision; failures = 0;
