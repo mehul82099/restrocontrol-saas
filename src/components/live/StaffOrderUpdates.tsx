@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { MIN_WAKE_MS, liveCheckDelay, shouldCheckLive } from '@/lib/live-order-policy';
 import { apiFetch } from '@/lib/api-fetch';
 
 export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string}) {
@@ -14,6 +15,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
     saveQueue.current = task;
     return task;
   };
+  const pushEnabled = useRef(false);
   const [connection, setConnection] = useState('Connecting to orders...');
   const [toast, setToast] = useState('');
   const [pushState, setPushState] = useState('Checking notification support...');
@@ -25,37 +27,51 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
 
   useEffect(() => {
     if (!allowed || !outletId) return;
-    let stopped = false, timer: ReturnType<typeof setTimeout>, revision = '', failures = 0, inFlight = false, lastRefreshAt = Date.now();
+    let stopped = false, timer: ReturnType<typeof setTimeout>, revision = '', failures = 0, inFlight = false, lastCheck = 0, denied = false;
     const controller = new AbortController();
     const emit = () => window.dispatchEvent(new CustomEvent('staff-order-update', {detail: {outletId}}));
+    const schedule = (delay: number) => { clearTimeout(timer); if (!stopped && !denied) timer = setTimeout(poll, delay); };
     const poll = async () => {
-      if (inFlight || stopped) return;
-      inFlight = true;
+      if (inFlight || stopped || denied) return;
       clearTimeout(timer);
+      if (!shouldCheckLive(!document.hidden, navigator.onLine)) {
+        setConnection(document.hidden ? 'Updates paused while hidden' : 'Offline. Order screens may be out of date.');
+        return; // No hidden/offline timer. Resume from visibility/online event.
+      }
+      inFlight = true; lastCheck = Date.now();
       try {
         const res = await apiFetch(outletId, '/api/live/orders', {cache: 'no-store', signal: controller.signal});
         if (stopped) return;
-        if ([401, 403, 402].includes(res.status)) { setConnection('Order updates paused. Check your sign-in and access.'); return; }
+        if ([401, 403, 402].includes(res.status)) { denied = true; setConnection('Order updates paused. Check your sign-in and access.'); return; }
         if (!res.ok) throw new Error();
         const data = await res.json();
         if (!data.success || !data.revision) throw new Error();
         if (stopped) return;
-        if (revision && data.revision !== revision) { emit(); setToast(user?.role === 'WAITER' ? 'Ready-to-serve tickets updated' : 'Order activity updated'); }
-        // Also catch up after a temporary outage without replaying old notifications.
-        if (failures || Date.now() - lastRefreshAt >= 30000) { emit(); lastRefreshAt = Date.now(); }
+        if ((revision && data.revision !== revision) || failures) {
+          emit();
+          if (revision && data.revision !== revision) setToast(user?.role === 'WAITER' ? 'Ready-to-serve tickets updated' : 'Order activity updated');
+        }
         revision = data.revision; failures = 0;
-        setConnection('Orders auto-update');
+        setConnection(pushEnabled.current ? 'Push alerts + 5-minute safety check' : 'Automatic check every 2 minutes');
       } catch { if (!stopped) { failures++; setConnection('Reconnecting. Order screens may be out of date.'); } }
-      inFlight = false;
-      if (!stopped) timer = setTimeout(poll, Math.min(60000, failures ? 4000 * 2 ** Math.min(failures, 4) : document.hidden ? 30000 : 4000));
+      finally { inFlight = false; }
+      if (shouldCheckLive(!document.hidden, navigator.onLine)) schedule(liveCheckDelay(pushEnabled.current, failures));
     };
-    // Serial polling, one timer, no overlapping requests. Focus re-checks at next tick.
-    const wake = () => { if (!document.hidden) { clearTimeout(timer); timer = setTimeout(poll, 250); } };
-    const onPush = (event: MessageEvent) => { if (event.data?.type === 'staff-order-update') emit(); };
+    const wake = () => {
+      if (!shouldCheckLive(!document.hidden, navigator.onLine)) {
+        clearTimeout(timer); setConnection(document.hidden ? 'Updates paused while hidden' : 'Offline. Order screens may be out of date.'); return;
+      }
+      // Repeated focus/online events cannot turn into an unbounded polling loop.
+      schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
+    };
+    const onPush = (event: MessageEvent) => {
+      if (event.data?.type !== 'staff-order-update' || !shouldCheckLive(!document.hidden, navigator.onLine)) return;
+      schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
+    };
     poll();
-    document.addEventListener('visibilitychange', wake); window.addEventListener('online', wake);
+    document.addEventListener('visibilitychange', wake); window.addEventListener('online', wake); window.addEventListener('offline', wake);
     navigator.serviceWorker?.addEventListener('message', onPush);
-    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); navigator.serviceWorker?.removeEventListener('message', onPush); };
+    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); window.removeEventListener('offline', wake); navigator.serviceWorker?.removeEventListener('message', onPush); };
   }, [allowed, outletId, user?.id]);
 
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 5000); return () => clearTimeout(timer); }, [toast]);
@@ -63,7 +79,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
   useEffect(() => {
     if (!allowed || !outletId) return;
     let stopped = false;
-    setConfigured(false); setEnabled(false);
+    setConfigured(false); setEnabled(false); pushEnabled.current = false;
     if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
       setPushState('Background alerts are not supported here. On iPhone, try the app added to Home Screen.'); return;
     }
@@ -78,7 +94,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
         if (stopped) return;
         if (subscription && Notification.permission === 'granted') {
           await saveSubscription(subscription);
-          if (!stopped) {setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');}
+          if (!stopped) {pushEnabled.current = true; setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');}
         } else setPushState(Notification.permission === 'denied' ? 'Alerts blocked. Change this site permission in browser settings.' : 'Allow alerts on this device, even when the site is closed.');
       } catch { if (!stopped) setPushState('Could not set up background alerts. Try again.'); }
     })();
@@ -93,7 +109,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
         if (!res.ok) throw new Error('Could not turn alerts off. Retry before signing out.');
         const registration = await navigator.serviceWorker.getRegistration('/');
         await (await registration?.pushManager.getSubscription())?.unsubscribe();
-        setEnabled(false); setPushState('Background alerts off on this device.'); return;
+        pushEnabled.current = false; setEnabled(false); setPushState('Background alerts off on this device.'); return;
       }
       // Permission request comes directly from a user gesture, never on load.
       const permission = await Notification.requestPermission();
@@ -103,7 +119,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
       const bytes = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
       const subscription = await registration.pushManager.getSubscription() || await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
       try { await saveSubscription(subscription); } catch (error) { await subscription.unsubscribe(); throw error; }
-      setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');
+      pushEnabled.current = true; setEnabled(true); setPushState('Background alerts on for this outlet and sign-in.');
     } catch (error: any) { setPushState(error.message || 'Could not enable alerts. Try again.'); }
     finally { setBusy(false); }
   };
