@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const jiti = require('jiti')(__filename);
+const { SUBSCRIPTION_PLANS: plans, findSubscriptionPlan } = jiti('../src/lib/subscription-plans.ts');
+assert.deepEqual(plans.map(p => p.price), [499, 699, 699, 999]);
+assert.deepEqual(plans.map(p => p.upcoming), [false, false, true, true]);
+assert.equal(new Set(plans.map(p => p.code)).size, 4);
+assert.equal(findSubscriptionPlan('APP_SINGLE').upcoming, true);
+assert.equal(findSubscriptionPlan('APP_MULTI').upcoming, true);
+for (const value of [null, undefined, {}, 'PRO', 'STARTER', 'WEBSITE_MULTI\n']) assert.equal(findSubscriptionPlan(value), undefined);
+const handler = fs.readFileSync('src/app/api/plans/request/route.ts', 'utf8');
+assert.match(handler, /authenticateRequest\(req, 'manage:subscription'\)/);
+assert.match(handler, /!plan \|\| plan\.upcoming/);
+assert.doesNotMatch(handler, /subscription\.(create|update|upsert)|fetch\(|razorpay/i);
+console.log('PASS: four catalog prices, upcoming gating, exact plan validation, owner-only request guard, no activation/payment mutation in request handler');
