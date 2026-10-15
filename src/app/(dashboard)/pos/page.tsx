@@ -490,7 +490,7 @@ export default function PosPage() {
               <p>No dishes match your filter.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
               {filteredItems.map((item) => {
                 const hasVariants = item.variants && item.variants.length > 0;
                 return (
@@ -514,7 +514,7 @@ export default function PosPage() {
                           </span>
                         )}
                       </div>
-                      <h4 className="font-extrabold text-slate-900 text-base sm:text-base line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                      <h4 className="font-extrabold text-slate-900 text-base leading-snug break-words group-hover:text-emerald-700 transition-colors">
                         {item.name}
                       </h4>
                       <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
@@ -1127,4 +1127,4 @@ export default function PosPage() {
       </Modal>
     </div></fieldset></>
   );
-          }
+}
