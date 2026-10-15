@@ -132,6 +132,30 @@ async function main() {
    const manager=await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'MANAGER'}});
    const response=await createUser(req('/api/users',token(manager),'POST',{name:'Waiter create test',email:'created-waiter-'+Date.now()+'@invalid.test',role:'WAITER',password:'local-test-password-only'}));assert.equal(response.status,200);assert.equal((await response.json()).user.role,'WAITER');
  });
+ await test('Efficient revision performs exactly one database call including current authority',async()=>{
+   const original=prisma.$queryRaw;let calls=0;
+   prisma.$queryRaw=function(...args){calls++;return original.apply(prisma,args)};
+   try {assert.equal((await live(req('/api/live/orders'))).status,200);assert.equal(calls,1);}
+   finally {prisma.$queryRaw=original;}
+ });
+ await test('Efficient revision rejects disabled user, stale claimed role and expired trial immediately',async()=>{
+   await prisma.user.update({where:{id:owner.id},data:{isActive:false}});assert.equal((await live(req('/api/live/orders'))).status,401);await prisma.user.update({where:{id:owner.id},data:{isActive:true,role:'INVENTORY_MANAGER'}});
+   assert.equal((await live(req('/api/live/orders'))).status,403);await prisma.user.update({where:{id:owner.id},data:{role:'OWNER'}});
+   const sub=await prisma.subscription.findUnique({where:{restaurantId:restaurant.id}});
+   await prisma.subscription.update({where:{restaurantId:restaurant.id},data:{status:'TRIALING',currentPeriodEnd:new Date(0)}});
+   assert.equal((await live(req('/api/live/orders'))).status,402);
+   await prisma.subscription.update({where:{restaurantId:restaurant.id},data:{status:sub.status,currentPeriodEnd:sub.currentPeriodEnd}});
+ });
+ await test('Efficient revision rejects removed outlet membership without permission caching',async()=>{
+   await prisma.userOutlet.deleteMany({where:{userId:waiter.id,outletId:outlet.id}});
+   assert.equal((await live(waiterReq('/api/live/orders'))).status,403);
+   await prisma.userOutlet.create({data:{userId:waiter.id,outletId:outlet.id}});
+ });
+ await test('Free-tier timer policy uses 2m fallback, 5m push safety, backoff and no hidden/offline checks',async()=>{
+   const {liveCheckDelay,shouldCheckLive}=jiti('../src/lib/live-order-policy');
+   assert.equal(liveCheckDelay(false),120000);assert.equal(liveCheckDelay(true),300000);assert.equal(liveCheckDelay(false,1),240000);assert.equal(liveCheckDelay(false,10),900000);
+   for(const state of [[false,true],[true,false],[false,false]])assert.equal(shouldCheckLive(...state),false);assert.equal(shouldCheckLive(true,true),true);
+ });
  console.log(passed+' LIVE ORDER / PUSH REGRESSIONS PASSED');
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>prisma.$disconnect());
