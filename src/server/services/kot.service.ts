@@ -1,3 +1,5 @@
+import { notifyOrderStaff } from './staff-push.service';
+import { cache } from '../cache/redis';
 import { prisma } from '../db/prisma';
 import { KotStatus, OrderStatus } from '@prisma/client';
 
@@ -76,6 +78,8 @@ export class KotService {
       });
     }
 
+    await cache.invalidatePattern(`dashboard:${restaurantId}:${kot.outletId}:*`).catch(() => {});
+    await notifyOrderStaff(restaurantId, kot.outletId, newStatus === KotStatus.READY && kot.status !== KotStatus.READY ? 'ready' : 'activity');
     return updatedKot;
   }
 }
