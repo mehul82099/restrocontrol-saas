@@ -10,7 +10,7 @@ function request(u,path,body){return new NextRequest('http://localhost/api/billi
  delete process.env.RAZORPAY_TEST_ENABLED;assert.throws(testConfig);process.env.RAZORPAY_TEST_ENABLED='true';process.env.RAZORPAY_TEST_KEY_ID='rzp_live_rejected';process.env.RAZORPAY_TEST_KEY_SECRET='mock_secret';assert.throws(testConfig);process.env.RAZORPAY_TEST_KEY_ID='rzp_test_mock';process.env.RAZORPAY_TEST_PLAN_SINGLE='plan_test_single';process.env.RAZORPAY_TEST_PLAN_MULTI='plan_test_multi';process.env.RAZORPAY_TEST_WEBHOOK_SECRET='mock_webhook_secret';process.env.VERCEL_ENV='production';assert.throws(testConfig);process.env.VERCEL_ENV='preview';
  assert.equal(validSignature('abc','short','secret'),false);
  global.fetch=async(url,opts={})=>{calls.push({url,method:opts.method,body:opts.body&&JSON.parse(opts.body)});const path=url.split('/v1/')[1];let b;
- if(path.startsWith('plans/')){const amount=path.endsWith('single')?49900:69900;b={id:path.split('/')[1],period:'monthly',interval:1,item:{amount,currency:'INR'}};}
+ if(path.startsWith('plans/')){const amount=path.endsWith('single')?58882:82482;b={id:path.split('/')[1],period:'monthly',interval:1,item:{amount,currency:'INR'}};}
  else if(path==='subscriptions'){b={id:remoteId,status,plan_id:plan};}
  else if(path.endsWith('/cancel')){status='cancelled';b={id:remoteId,status,plan_id:plan};}
  else b={id:remoteId,status,plan_id:plan,current_start:100,current_end:200};

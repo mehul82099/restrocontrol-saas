@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { findSubscriptionPlan } from '@/lib/subscription-plans';
+import { findSubscriptionPlan, planBreakup } from '@/lib/subscription-plans';
 
 export function testConfig() {
   if(process.env.RAZORPAY_TEST_ENABLED!=='true'||process.env.VERCEL_ENV==='production') throw new Error('TEST billing is disabled.');
@@ -27,6 +27,6 @@ export async function razorTest(path:string,method='GET',body?:unknown){
 }
 export async function verifyPlan(code:unknown){
   const plan=testPlan(code),remote=await razorTest('plans/'+plan.id);
-  if(remote.period!=='monthly'||remote.interval!==1||remote.item?.amount!==plan.price*100||remote.item?.currency!=='INR')throw new Error('TEST plan amount/currency/interval does not match the catalogue.');
+  if(remote.period!=='monthly'||remote.interval!==1||remote.item?.amount!==planBreakup(plan).totalPaise||remote.item?.currency!=='INR')throw new Error('TEST plan amount/currency/interval does not match the GST-inclusive catalogue total.');
   return plan;
 }
