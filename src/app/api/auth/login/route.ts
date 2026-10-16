@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
-import { signToken } from '@/server/auth/jwt';
+import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { AuditService } from '@/server/services/audit.service';
+import { isDemoAccount } from '@/server/auth/demo';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     });
 
     const user = candidates.length === 1 ? candidates[0] : null;
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || isDemoAccount(user)) {
       return NextResponse.json(
         { success: false, error: 'Invalid email or password.' },
         { status: 401 }
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         where: { restaurantId: user.restaurantId, isDefault: true },
       }));
 
-    const token = signToken({
+    const token = await issueAttendanceToken({
       userId: user.id,
       restaurantId: user.restaurantId,
       role: user.role,
