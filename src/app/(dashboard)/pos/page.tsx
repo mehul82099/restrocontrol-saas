@@ -1,4 +1,5 @@
 'use client';
+import { useOrderUpdates } from '@/lib/use-order-updates';
 import { apiFetch } from '@/lib/api-fetch';
 
 import { Scale } from 'lucide-react';
@@ -84,6 +85,15 @@ export default function PosPage() {
 
   // Receipt Modal
   const [completedOrder, setCompletedOrder] = useState<any>(null);
+
+  useOrderUpdates(activeOutletId, async () => {
+    const requestedKey = key;
+    try {
+      const response = await apiFetch(activeOutletId, '/api/pos/catalog', {cache: 'no-store'});
+      const data = await response.json();
+      if (response.ok && data.success && hydratedScope.current === requestedKey) setTables(data.catalog.tables || []);
+    } catch { /* Keep checkout/cart intact when an automatic table refresh fails. */ }
+  });
 
   // Fetch POS Catalog
   const fetchCatalog = async () => {
@@ -1127,4 +1137,4 @@ export default function PosPage() {
       </Modal>
     </div></fieldset></>
   );
-}
+              }
