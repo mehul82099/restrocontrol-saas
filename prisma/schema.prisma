@@ -12,6 +12,7 @@ enum UserRole {
   MANAGER
   CASHIER
   KITCHEN_STAFF
+  WAITER
   INVENTORY_MANAGER
 }
 
@@ -143,6 +144,9 @@ model Restaurant {
   subscription        Subscription?
   refundRequests      RefundRequest[]
 
+  attendanceSessions AttendanceSession[]
+  staffInvites StaffInvite[]
+
   @@index([slug])
 }
 
@@ -193,6 +197,9 @@ model User {
   userOutlets UserOutlet[]
   orders      Order[]
   auditLogs   AuditLog[]
+  attendanceSessions AttendanceSession[]
+  invitesCreated StaffInvite[] @relation("InviteCreator")
+  inviteUsed StaffInvite? @relation("InviteUsedBy")
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -853,4 +860,58 @@ model TestBillingEvent {
   providerId    String
   eventType     String
   receivedAt    DateTime @default(now())
+}
+
+// Browser capabilities are private. Bind to a specific login, tenant and outlet.
+model StaffPushSubscription {
+  id           String @id @default(uuid())
+  endpoint     String @unique
+  p256dh       String
+  auth         String
+  userId       String
+  restaurantId String
+  outletId     String
+  sessionHash  String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@index([restaurantId, outletId, expiresAt])
+  @@index([sessionHash])
+}
+
+// One attendance record per staff login session, not a verified physical shift.
+model AttendanceSession {
+  id String @id @default(uuid())
+  restaurantId String
+  userId String
+  staffName String
+  staffRole String
+  outletId String?
+  checkedInAt DateTime @default(now())
+  expiresAt DateTime
+  checkedOutAt DateTime?
+  checkoutReason String?
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([restaurantId, checkedInAt, id])
+  @@index([userId, expiresAt])
+}
+
+// One link per staff member: single-use, 48h expiry, role preset. Only the SHA-256 of the token is stored.
+model StaffInvite {
+  id           String    @id @default(uuid())
+  restaurantId String
+  tokenHash    String    @unique
+  role         UserRole
+  label        String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  usedById     String?   @unique
+  revokedAt    DateTime?
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  usedBy       User?      @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+  @@index([restaurantId, createdAt])
 }
