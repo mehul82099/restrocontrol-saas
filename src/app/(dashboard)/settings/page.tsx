@@ -12,12 +12,21 @@ import {
   Shield,
   Bell,
   Scale,
+  KeyRound,
 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Change-password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMessage, setPwMessage] = useState('');
+  const [pwError, setPwError] = useState('');
 
   // Form State
   const [name, setName] = useState('');
@@ -85,6 +94,35 @@ export default function SettingsPage() {
       alert(err.message || 'Error updating settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError('');
+    setPwMessage('');
+    if (newPassword !== confirmPassword) {
+      setPwError('New passwords do not match.');
+      return;
+    }
+    try {
+      setPwSaving(true);
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Password could not be changed');
+      setPwMessage('Password updated. Use the new password at your next sign-in.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setPwError(err.message || 'Password could not be changed');
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -287,6 +325,70 @@ export default function SettingsPage() {
           </div>
         </form>
       )}
+
+      {/* Account: change password (separate from restaurant settings above) */}
+      <form onSubmit={handleChangePassword} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+        <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 pb-3 border-b border-slate-100">
+          <KeyRound className="w-5 h-5 text-emerald-600" />
+          Change Password
+        </h3>
+        <p className="text-xs text-slate-500">Changes the sign-in password for your own account.</p>
+
+        {pwError && (
+          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+            {pwError}
+          </div>
+        )}
+        {pwMessage && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-700 font-medium">
+            {pwMessage}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password *</label>
+            <input
+              type="password"
+              required
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">New Password *</label>
+            <input
+              type="password"
+              required
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password *</label>
+            <input
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-400">10-72 characters, at least one letter and one number.</p>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={pwSaving}
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-xs transition-all disabled:opacity-50"
+          >
+            {pwSaving ? 'Updating...' : 'Update Password'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

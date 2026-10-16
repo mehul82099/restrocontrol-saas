@@ -200,6 +200,7 @@ model User {
   attendanceSessions AttendanceSession[]
   invitesCreated StaffInvite[] @relation("InviteCreator")
   inviteUsed StaffInvite? @relation("InviteUsedBy")
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -914,4 +915,16 @@ model StaffInvite {
   createdBy    User       @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
   usedBy       User?      @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
   @@index([restaurantId, createdAt])
+}
+
+// Password reset links: single-use, 30min expiry. Only the SHA-256 of the token is stored.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
 }
