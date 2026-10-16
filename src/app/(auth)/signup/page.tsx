@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import WorldAuthShell from '@/components/world/WorldAuthShell';
@@ -19,6 +19,20 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [googleOn, setGoogleOn] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    if (code === 'google_unavailable') setError('Google sign-up is not available yet. Use your email.');
+    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleOn(!!d.google)).catch(() => {});
+    if (new URLSearchParams(window.location.search).get('google') === '1') {
+      fetch('/api/auth/google/pending').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.success) { setGoogleEmail(d.email); setOwnerName(d.name || ''); }
+        else setError('Google verification expired. Please continue with Google again.');
+      }).catch(() => {});
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ restaurantName, ownerName, email, phone, password }),
+        body: JSON.stringify(googleEmail ? { google: true, restaurantName, ownerName, phone } : { restaurantName, ownerName, email, phone, password }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Sign-up failed.');
@@ -65,19 +79,28 @@ export default function SignupPage() {
             <label className={labelClass}>Your name</label>
             <input className={inputClass} required maxLength={80} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
           </div>
+          {googleEmail ? (
+            <div>
+              <label className={labelClass}>Google account</label>
+              <input className={inputClass} readOnly value={googleEmail} />
+            </div>
+          ) : (
           <div>
             <label className={labelClass}>Email address</label>
             <input type="email" className={inputClass} required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
+          )}
           <div>
             <label className={labelClass}>Phone (optional)</label>
             <input type="tel" className={inputClass} maxLength={20} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
+          {!googleEmail && (
           <div>
             <label className={labelClass}>Password</label>
             <input type="password" className={inputClass} required minLength={10} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} />
             <p className="text-[11px] text-stone-500 mt-1">At least 10 characters, with a letter and a number.</p>
           </div>
+          )}
           <button
             type="submit"
             disabled={loading}
@@ -93,6 +116,17 @@ export default function SignupPage() {
             )}
           </button>
         </form>
+
+        {googleOn && !googleEmail && (
+          <div className="mt-5 pt-5 border-t border-stone-200">
+            <a
+              href="/api/auth/google/start?mode=signup"
+              className="w-full py-3 bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-all"
+            >
+              <span>Sign up with Google</span>
+            </a>
+          </div>
+        )}
 
         <p className="text-xs text-stone-500 text-center mt-6">
           Already have an account?{' '}
