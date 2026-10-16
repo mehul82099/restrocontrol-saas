@@ -2,7 +2,9 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { findSubscriptionPlan, planBreakup } from '@/lib/subscription-plans';
 
 export function testConfig() {
-  if(process.env.RAZORPAY_TEST_ENABLED!=='true'||process.env.VERCEL_ENV==='production') throw new Error('TEST billing is disabled.');
+  if(process.env.RAZORPAY_TEST_ENABLED!=='true') throw new Error('TEST billing is disabled.');
+  // Production needs a second, explicit opt-in. Live keys are refused below either way.
+  if(process.env.VERCEL_ENV==='production'&&process.env.RAZORPAY_TEST_ALLOW_PRODUCTION!=='true') throw new Error('TEST billing is disabled in production.');
   const key=process.env.RAZORPAY_TEST_KEY_ID||'',secret=process.env.RAZORPAY_TEST_KEY_SECRET||'';
   if(!key.startsWith('rzp_test_')||!secret)throw new Error('Valid TEST keys are required. Live keys are refused.');
   return {key,secret};
