@@ -1,3 +1,4 @@
+import { notifyOrderStaff } from './staff-push.service';
 import { finiteNumber, assertTenantReference, serializable } from './validation';
 import { randomUUID } from 'crypto';
 import { prisma } from '../db/prisma';
@@ -334,6 +335,7 @@ export class OrderService {
       console.error('Dashboard cache invalidation failed after committed order');
     });
 
+    if (!result.isDuplicate) await notifyOrderStaff(restaurantId, outletId);
     return result;
   }
 
@@ -347,7 +349,7 @@ export class OrderService {
     reason?: string,
     reverseStock = true
   ) {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
         include: { items: true, table: true },
@@ -425,6 +427,9 @@ export class OrderService {
 
       return updatedOrder;
     }, serializable);
+    await cache.invalidatePattern(`dashboard:${restaurantId}:${result.outletId}:*`).catch(() => {});
+    await notifyOrderStaff(restaurantId, result.outletId);
+    return result;
   }
 
   /**
@@ -437,7 +442,7 @@ export class OrderService {
     userId?: string | null,
     reason?: string
   ) {
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
       });
@@ -489,5 +494,8 @@ export class OrderService {
 
       return updatedOrder;
     }, serializable);
+    await cache.invalidatePattern(`dashboard:${restaurantId}:${result.outletId}:*`).catch(() => {});
+    await notifyOrderStaff(restaurantId, result.outletId);
+    return result;
   }
 }
