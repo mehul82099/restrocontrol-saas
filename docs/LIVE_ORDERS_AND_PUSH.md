@@ -1,0 +1,55 @@
+# Staff order updates (preview)
+
+Production must not be changed until the owner approves publishing.
+
+## What works without new services
+
+- Push is the fast update signal. The signed-in dashboard uses a 2-minute fallback check while visible and online, or a 5-minute safety check when push is enabled. Hidden and offline pages stop checking. Focus/reconnect/push signals schedule a check, with a minimum 15-second gap to coalesce bursts. Failures back off to a maximum 15 minutes. A reconnecting/stale notice stays visible after errors. Without push, changes can take up to 2 minutes to appear under normal conditions; browser throttling or network failures can take longer.
+- Changed revisions refresh the order list, kitchen board, owner/manager metrics, and POS table availability without resetting carts, held orders or payment state. A short in-app popup signals order activity. Unchanged checks never reload dashboard/order/catalog data. The notification bell refreshes on initial load and when opened, not every 20 seconds. The initial load does not replay old activity.
+- This is near-live automatic refresh, not a persistent WebSocket connection or a guarantee of instant delivery. No paid pub/sub service or Redis is required. Database/serverless usage still counts toward the host's free allowances; monitor usage before scaling.
+- Owner, Manager, Cashier and Kitchen Staff receive order activity. The approved Waiter role uses a dedicated unpaid order-entry and ready-ticket screen. It cannot take payments, issue refunds/cancellations, change kitchen statuses, view full bill history or see sales reports. Waiter background alerts are sent only when a ticket becomes READY.
+
+## Background push setup (not enabled on production)
+
+1. Use an isolated preview database. Never point the preview at the production database for mutation testing.
+2. Apply the additive `StaffPushSubscription` schema there with `npx prisma db push` (existing project uses schema push, not a migration-history baseline). An equivalent additive SQL script is in `docs/sql/staff-push.sql`.
+3. Generate one VAPID key pair with `npx web-push generate-vapid-keys`. Keep the private key only in the deployment's secret environment settings. Set `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` (a verified support `mailto:` address or HTTPS contact URL). Do not commit private keys.
+4. Deploy over HTTPS. Each staff member clicks Enable alerts and accepts that browser's notification prompt. No permission prompt is fired automatically on page load. Permissions are per browser/device.
+5. A subscription follows that browser's currently selected outlet. Switching outlets updates its binding. Logging in again renews the binding only when permission already exists. Turning alerts off removes the current session's subscriptions and unsubscribes the browser.
+6. Run a real two-device test: submit an order on one, observe kitchen/order updates on the other; close the receiving page and confirm a native push. Verify logout, expiry, disabled user, removed outlet membership and browser permission denial. Test the actual supported Android/iPhone browsers before release.
+
+If the environment is not configured, the UI says setup is pending. It must not imply background alerts are active. VAPID private keys are not needed for the in-app update flow.
+
+## Security and delivery limits
+
+- Every revision read reloads current user, role, trial and outlet authority. No cross-tenant/global order feed exists.
+- Push registration requires a current cookie session, CSRF/origin checks and an order-facing role. Tenant/user/outlet identifiers come from authentication, not the supplied JSON. Only known HTTPS browser-push service hosts are accepted, to prevent arbitrary server-side requests. Other provider hosts fail closed until deliberately reviewed.
+- Server dispatch rechecks user activity, membership, role, outlet and trial. The queued payload contains only a random subscription ID, not order/customer details or credentials.
+- On receipt, the service worker fetches the current authenticated session and matching subscription before showing a generic order-activity notification. Signed-out/expired/disabled/unassigned users fail closed, including an old push arriving after sign-out. No authenticated page/API caching is added. A notification already displayed before sign-out may remain in the operating system notification tray.
+- Subscriptions expire with the 12-hour login. Logout removes registrations for that session. 404/410 browser endpoints are removed. The host should periodically remove expired rows as routine maintenance; no paid scheduler is installed by this change.
+- Delivery is best effort after a committed order create/cancel/refund or kitchen update (Waiter: READY transitions only). An idempotent checkout retry does not send again. Push failures never undo the order. There is no durable push retry queue, so a process interruption/provider outage can lose an alert; the in-app revision check recovers the authoritative order state when the page returns.
+- Browser/OS support, network access, notification permission, battery/background restrictions and device settings affect delivery. Unsupported browsers retain automatic in-app updates. iPhone/iPad web push generally requires an eligible Home Screen web app. A push subscription is not an indefinitely valid staff login.
+- Native notification text is intentionally generic on lock screens. Opening it takes the staff member to their normal authenticated screen, whose existing access checks still apply.
+
+## Checks
+
+`npm run build`, `npm run test:reliability`, `npm run test:security`, and `npm run test:live-orders`.
+
+Database-dependent tests refuse a non-local database. Test VAPID keys are generated only in process; the regression suite does not send to external push services.
+
+## Waiter schema update
+
+Apply `ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'WAITER';` to the isolated preview database before assigning a waiter. The production enum must remain untouched until publish approval. The waiter API rechecks the current role and outlet assignment on every request.
+
+## Free-tier operation budget
+
+The revision endpoint makes exactly one parameterized SQL operation per valid check. That same statement verifies the JWT-bound active user, current role, trial and assigned active outlet before returning a digest. Invalid JWTs make zero database calls. No staff permission cache weakens revocation. Order and kitchen aggregates are restricted to the authorized outlet; waiters receive only a digest of ready tickets.
+
+Steady visible usage example, calculated as 5 devices × 8 hours/day × 30 days:
+- 2-minute fallback: 36,000 revision operations/month.
+- Push enabled, 5-minute safety checks: 14,400 revision operations/month, plus event-triggered checks.
+- Previous 4-second loop: 1,080,000 revision requests/month before its multiple authority/data queries, and before the separate 20-second header loop.
+
+These are incremental revision counts, not a full application budget or guaranteed provider invoice count. Initial loads, focus events, multiple tabs, push validation/dispatch, changed-screen data loads, orders, reports and writes also consume operations. Five devices kept visible 24 hours/day already use 108,000 fallback checks/month. More restaurants/devices multiply usage. This does not guarantee the whole application fits 100K. Review provider usage during a real shift and retain headroom before publish. No paid service or automatic upgrade is installed. Database storage and compute limits still apply; SQL aggregates scan outlet order history, so a large history may eventually need durable revision counters or another update service.
+
+The browser owns its timers and background push support. Push remains best effort, can be dropped or delayed, and has not been certified on a real closed-page phone. The slower polling fallback is a deliberate free-tier trade-off, not instantaneous realtime. Hidden pages catch up when visible again; they do not run a hidden safety poll. Multiple simultaneously visible tabs currently each have their own fallback checks.
