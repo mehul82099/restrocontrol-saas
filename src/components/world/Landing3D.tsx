@@ -62,8 +62,8 @@ function Panel({ stop }: { stop: StopId }) {
       return (
         <>
           <p className="text-[11px] font-bold uppercase tracking-[.2em] text-emerald-700">Website plans</p>
-          <p className="mt-2 text-4xl font-black text-stone-900">From ₹499<span className="text-base font-semibold text-stone-500"> website plan</span></p>
-          <p className="mt-2 text-sm text-stone-600">Website plans from ₹499. App access is upcoming. Start with a 14-day free trial, no card needed.</p>
+          <p className="mt-2 text-4xl font-black text-stone-900">From ₹499 + GST<span className="text-base font-semibold text-stone-500"> website plan</span></p>
+          <p className="mt-2 text-sm text-stone-600">Website plans from ₹499 + GST. App access is upcoming. Start with a 14-day free trial, no card needed.</p>
           <div className="mt-4"><Cta href="/pricing">Compare plans <ArrowRight className="w-4 h-4" /></Cta></div>
         </>
       );
