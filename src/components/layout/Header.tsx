@@ -46,8 +46,7 @@ export function Header({ user, activeOutletId, onOutletChange, onMenuClick }: He
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 20000);
-    return () => clearInterval(interval);
+    // Refresh on opening the bell, not a second always-on polling loop.
   }, [activeOutletId]);
 
   const handleMarkAllRead = async () => {
@@ -66,10 +65,11 @@ export function Header({ user, activeOutletId, onOutletChange, onMenuClick }: He
 
   const handleLogout = async () => {
     try {
-      await apiFetch(activeOutletId, '/api/auth/logout', { method: 'POST' });
+      const result = await apiFetch(activeOutletId, '/api/auth/logout', { method: 'POST' });
+      if (!result.ok) throw new Error('Logout failed');
       router.push('/login');
     } catch {
-      router.push('/login');
+      alert('Check-out could not be recorded. Please retry Logout.');
     }
   };
 
@@ -114,7 +114,7 @@ export function Header({ user, activeOutletId, onOutletChange, onMenuClick }: He
         {/* Notification Bell */}
         <div className="sm:relative">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => { if (!showNotifications) void fetchNotifications(); setShowNotifications(!showNotifications); }}
             className="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors relative"
           >
             <Bell className="w-4 h-4" />

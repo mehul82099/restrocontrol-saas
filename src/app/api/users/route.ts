@@ -39,7 +39,7 @@ async function handlePOST(req: NextRequest) {
 
   const data = await req.json();
   if (typeof data.password !== 'string' || data.password.length < 12 || data.password.length > 72) return NextResponse.json({success: false, error: 'Use a password of 12 to 72 characters.'}, {status: 400});
-  if (!['OWNER','MANAGER','CASHIER','KITCHEN_STAFF','INVENTORY_MANAGER'].includes(data.role) || (auth.user.role !== 'OWNER' && !['CASHIER','KITCHEN_STAFF','INVENTORY_MANAGER'].includes(data.role))) return NextResponse.json({success: false, error: 'Role assignment denied.'}, {status: 403});
+  if (!['OWNER','MANAGER','CASHIER','KITCHEN_STAFF','WAITER','INVENTORY_MANAGER'].includes(data.role) || (auth.user.role !== 'OWNER' && !['CASHIER','KITCHEN_STAFF','WAITER','INVENTORY_MANAGER'].includes(data.role))) return NextResponse.json({success: false, error: 'Role assignment denied.'}, {status: 403});
   if (typeof data.email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) return NextResponse.json({success: false, error: 'Invalid email.'}, {status: 400});
   const passwordHash = await bcrypt.hash(data.password, 12);
 

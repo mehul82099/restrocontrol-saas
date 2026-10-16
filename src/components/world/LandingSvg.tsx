@@ -69,7 +69,7 @@ export default function LandingSvg() {
               Start 14-day free trial <ArrowRight className="w-4 h-4" />
             </Link>
             <a href="#plan" className="inline-flex items-center justify-center px-6 py-3.5 rounded-2xl bg-slate-900/70 backdrop-blur border border-amber-400/50 text-amber-200 font-bold text-sm hover:bg-slate-800/80">
-              ₹499 / month, one plan
+              Plans from ₹499
             </a>
           </div>
           <p className="mt-3 text-xs text-slate-400">No card needed to start.</p>
@@ -109,9 +109,9 @@ export default function LandingSvg() {
       <section id="plan" className="px-5 sm:px-8 pb-20 max-w-5xl mx-auto">
         <div className="rounded-3xl border border-amber-400/30 bg-gradient-to-b from-slate-900 to-slate-950 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">One plan</p>
-            <p className="mt-1 text-4xl font-black text-white">₹499<span className="text-base font-semibold text-slate-400"> / month per restaurant</span></p>
-            <p className="mt-2 text-sm text-slate-400">Everything included. Start with a 14-day free trial, no card needed.</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-300">Website plans</p>
+            <p className="mt-1 text-4xl font-black text-white">From ₹499<span className="text-base font-semibold text-slate-400"> website plan</span></p>
+            <p className="mt-2 text-sm text-slate-400">Website plans from ₹499. App access is upcoming. Start with a 14-day free trial, no card needed.</p>
           </div>
           <Link href="/signup" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm">
             Start free trial <ArrowRight className="w-4 h-4" />

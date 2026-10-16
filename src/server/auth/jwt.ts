@@ -8,6 +8,7 @@ export interface AuthUserPayload {
   email: string;
   name: string;
   outletId?: string;
+  attendanceSessionId?: string;
 }
 
 function signingKey(): string {
@@ -25,6 +26,20 @@ export function signToken(payload: AuthUserPayload): string {
 export function verifyToken(token: string): AuthUserPayload | null {
   try {
     return jwt.verify(token, signingKey(), { algorithms: ['HS256'] }) as AuthUserPayload;
+  } catch {
+    return null;
+  }
+}
+
+// Short-lived, purpose-bound token (e.g. a Google-verified email waiting for the restaurant name at sign-up).
+export function signPurposeToken(purpose: string, data: Record<string, string>, ttl: string = '15m'): string {
+  return jwt.sign({ ...data, purpose }, signingKey(), { expiresIn: ttl as any, algorithm: 'HS256' });
+}
+
+export function verifyPurposeToken(token: string, purpose: string): Record<string, string> | null {
+  try {
+    const p = jwt.verify(token, signingKey(), { algorithms: ['HS256'] }) as any;
+    return p && p.purpose === purpose ? p : null;
   } catch {
     return null;
   }

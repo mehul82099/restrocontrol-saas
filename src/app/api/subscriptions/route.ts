@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { prisma } from '@/server/db/prisma';
+import { SUBSCRIPTION_PLANS } from '@/lib/subscription-plans';
 
 async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req);
@@ -11,7 +12,7 @@ async function handleGET(req: NextRequest) {
 
   const [sub, allPlans] = await Promise.all([
     SubscriptionService.getRestaurantSubscription(auth.restaurantId),
-    prisma.plan.findMany({ orderBy: { priceMonthly: 'asc' } }),
+    Promise.resolve(SUBSCRIPTION_PLANS),
   ]);
 
   return NextResponse.json({ success: true, subscription: sub, plans: allPlans });

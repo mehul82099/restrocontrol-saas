@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Landing3D from './Landing3D';
 import LandingSvg from './LandingSvg';
+import SiteFooter from '@/components/public/SiteFooter';
 
 function hasWebGL() {
   try {
@@ -18,5 +19,5 @@ export default function Landing() {
   const [mode, setMode] = useState<'check' | '3d' | 'svg'>('check');
   useEffect(() => setMode(hasWebGL() ? '3d' : 'svg'), []);
   if (mode === 'check') return <div className="min-h-screen bg-[#f3ede0]" />;
-  return mode === '3d' ? <Landing3D /> : <LandingSvg />;
+  return <>{mode === '3d' ? <Landing3D /> : <LandingSvg />}<SiteFooter /></>;
 }

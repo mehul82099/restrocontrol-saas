@@ -1,4 +1,5 @@
 'use client';
+import { useOrderUpdates } from '@/lib/use-order-updates';
 import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -31,10 +32,11 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = async (quiet = false) => {
     if (!activeOutletId) return;
     const seq = ++requestSeq.current;
-    setLoading(true); setError(''); setMetrics(null);
+    if (!quiet) { setLoading(true); setMetrics(null); }
+    setError('');
     try {
       const res = await apiFetch(activeOutletId, `/api/analytics/dashboard?outletId=${activeOutletId}&filter=${filter}`);
       const data = await res.json();
@@ -51,6 +53,7 @@ export default function DashboardPage() {
     }
   };
 
+  useOrderUpdates(activeOutletId, () => { void fetchMetrics(true); });
   useEffect(() => {
     fetchMetrics();
   }, [activeOutletId, filter]);
@@ -84,7 +87,7 @@ export default function DashboardPage() {
             </button>
           ))}
           <button
-            onClick={fetchMetrics}
+            onClick={() => fetchMetrics()}
             className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-50 ml-1"
             title="Refresh Metrics"
           >

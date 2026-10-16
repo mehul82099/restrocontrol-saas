@@ -1,5 +1,6 @@
 'use client';
 import { elapsedLabel, ticketToken } from '@/lib/pos-recovery';
+import { useOrderUpdates } from '@/lib/use-order-updates';
 import { apiFetch } from '@/lib/api-fetch';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -20,6 +21,9 @@ import { Badge } from '@/components/ui/Badge';
 export default function KotPage() {
   const { activeOutletId } = useOutlet();
   const outletRef = useRef(activeOutletId); outletRef.current = activeOutletId;
+  const requestSeq = useRef(0);
+  const [, setClock] = useState(0);
+  useEffect(() => { const timer = setInterval(() => setClock(n => n + 1), 30000); return () => clearInterval(timer); }, []);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState('');
   const [tickets, setTickets] = useState<any[]>([]);
@@ -28,10 +32,11 @@ export default function KotPage() {
 
   const fetchTickets = async () => {
     if (!activeOutletId) return;
+    const seq = ++requestSeq.current;
     try {
       const res = await apiFetch(activeOutletId, `/api/kot?outletId=${activeOutletId}`);
       const data = await res.json();
-      if (outletRef.current !== activeOutletId) return;
+      if (outletRef.current !== activeOutletId || seq !== requestSeq.current) return;
       if (!res.ok || !data.success) throw new Error(data.error || 'Kitchen feed unavailable');
       if (data.success) {
         setError('');
@@ -39,17 +44,17 @@ export default function KotPage() {
         setLastRefreshed(new Date());
       }
     } catch (err: any) {
-      setError(err.message || 'Kitchen feed unavailable. Tickets may be out of date.');
+      if (seq === requestSeq.current) setError(err.message || 'Kitchen feed unavailable. Tickets may be out of date.');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   };
 
+  useOrderUpdates(activeOutletId, fetchTickets);
   useEffect(() => {
     setTickets([]); setLoading(true); setError('');
     fetchTickets();
-    const interval = setInterval(fetchTickets, 5000); // 5s auto-refresh
-    return () => clearInterval(interval);
+
   }, [activeOutletId]);
 
   const updateStatus = async (ticketId: string, newStatus: string) => {
@@ -109,7 +114,7 @@ export default function KotPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400">
-            Auto-refreshing (every 5s) • Updated {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}
+            Automatic order updates • Updated {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}
           </span>
           <button
             onClick={fetchTickets}

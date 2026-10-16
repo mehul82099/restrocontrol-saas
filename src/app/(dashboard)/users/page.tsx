@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import StaffInvitePanel from '@/components/users/StaffInvitePanel';
 import { formatDate } from '@/lib/utils';
 
 interface UserRecord {
   id: string;
   name: string;
   email: string;
-  role: 'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER';
+  role: 'OWNER' | 'MANAGER' | 'CASHIER' | 'WAITER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER';
   phone?: string;
   isActive: boolean;
   createdAt: string;
@@ -43,6 +44,7 @@ const ROLE_PERMISSIONS: { [key: string]: { title: string; desc: string; access: 
     desc: 'Front-of-house billing, taking orders, split payments, receipts, and customer CRM',
     access: ['POS Terminal', 'Dine-in / Takeaway / Delivery', 'Split Payments (Cash, Card, UPI)', 'Receipt Printing', 'Customer Directory'],
   },
+  WAITER: {title: 'Waiter', desc: 'Place unpaid floor orders and see ready-to-serve tickets in the assigned outlet', access: ['Place orders', 'Ready-to-serve tickets', 'Ready-ticket alerts', 'No payments, refunds, sales reports or kitchen status changes']},
   KITCHEN_STAFF: {
     title: 'Kitchen Staff',
     desc: 'Kitchen display screen, receiving KOTs, updating order prep and ready statuses',
@@ -64,9 +66,9 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'OWNER' | 'MANAGER' | 'CASHIER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER'>('CASHIER');
+  const [role, setRole] = useState<'OWNER' | 'MANAGER' | 'CASHIER' | 'WAITER' | 'KITCHEN_STAFF' | 'INVENTORY_MANAGER'>('CASHIER');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('Password123!');
+  const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = async () => {
@@ -144,6 +146,8 @@ export default function UsersPage() {
           </button>
         </div>
       </div>
+
+      <StaffInvitePanel onJoined={fetchUsers} />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -329,6 +333,7 @@ export default function UsersPage() {
                 <option value="OWNER">Owner (Full Access)</option>
                 <option value="MANAGER">Manager (Supervisory)</option>
                 <option value="CASHIER">Cashier (POS & CRM)</option>
+                <option value="WAITER">Waiter (Orders & Ready Tickets)</option>
                 <option value="KITCHEN_STAFF">Kitchen Staff (KDS/KOT)</option>
                 <option value="INVENTORY_MANAGER">Inventory Manager (Stock & PO)</option>
               </select>

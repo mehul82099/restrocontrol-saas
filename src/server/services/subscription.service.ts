@@ -1,153 +1,49 @@
 import { prisma } from '../db/prisma';
 import { SubscriptionStatus } from '@prisma/client';
+import { SUBSCRIPTION_PLANS } from '@/lib/subscription-plans';
+import { getTrialInfo, trialEndDate } from './trial.service';
 
 export class SubscriptionService {
-  /**
-   * Seed standard plans if not present.
-   */
   static async seedStandardPlans() {
-    const plans = [
-      {
-        code: 'STARTER',
-        name: 'Starter Plan',
-        priceMonthly: 1499,
-        priceYearly: 14990,
-        maxOutlets: 1,
-        maxUsers: 3,
-        maxOrdersPerMonth: 1000,
-        hasAdvancedReports: false,
-        hasAiFeatures: false,
-        features: JSON.stringify(['1 Outlet', 'Up to 3 Users', '1,000 Orders/mo', 'POS & KOT', 'Recipe Engine', 'Basic Inventory']),
-      },
-      {
-        code: 'GROWTH',
-        name: 'Growth Plan',
-        priceMonthly: 2999,
-        priceYearly: 29990,
-        maxOutlets: 2,
-        maxUsers: 8,
-        maxOrdersPerMonth: 5000,
-        hasAdvancedReports: true,
-        hasAiFeatures: false,
-        features: JSON.stringify(['2 Outlets', 'Up to 8 Users', '5,000 Orders/mo', 'Full Inventory Ledger', 'Wastage Tracking', 'Variance Analytics']),
-      },
-      {
-        code: 'PRO',
-        name: 'Pro Kitchen',
-        priceMonthly: 4999,
-        priceYearly: 49990,
-        maxOutlets: 5,
-        maxUsers: 20,
-        maxOrdersPerMonth: 20000,
-        hasAdvancedReports: true,
-        hasAiFeatures: true,
-        features: JSON.stringify(['5 Outlets', 'Up to 20 Users', '20,000 Orders/mo', 'Purchase Orders', 'Stock Audits', 'Recipe Food Costing', 'All 20 Reports']),
-      },
-      {
-        code: 'MULTI_OUTLET',
-        name: 'Multi-Outlet Enterprise',
-        priceMonthly: 9999,
-        priceYearly: 99990,
-        maxOutlets: 25,
-        maxUsers: 100,
-        maxOrdersPerMonth: 100000,
-        hasAdvancedReports: true,
-        hasAiFeatures: true,
-        features: JSON.stringify(['25 Outlets', 'Unlimited Staff', '100,000 Orders/mo', 'Central Kitchen Transfers', 'Priority 24/7 SLA', 'Custom Integrations']),
-      },
-    ];
-
-    for (const plan of plans) {
-      await prisma.plan.upsert({
-        where: { code: plan.code },
-        create: plan,
-        update: plan,
-      });
+    for (const plan of SUBSCRIPTION_PLANS) {
+      const data = {
+        code: plan.code, name: plan.name, priceMonthly: plan.price, priceYearly: null,
+        maxOutlets: plan.maxOutlets, maxUsers: plan.maxUsers, maxOrdersPerMonth: plan.maxOrdersPerMonth,
+        isAvailable: !plan.upcoming, hasAdvancedReports: !plan.upcoming, hasAiFeatures: false,
+        features: JSON.stringify([plan.description, ...(plan.upcoming ? ['Upcoming - unavailable'] : ['POS, inventory, recipes, purchases, stock audits and reports'])]),
+      };
+      await prisma.plan.upsert({ where: { code: plan.code }, create: data, update: data });
     }
   }
 
-  /**
-   * Get subscription status and limits for a restaurant.
-   */
   static async getRestaurantSubscription(restaurantId: string) {
-    const sub = await prisma.subscription.findUnique({
-      where: { restaurantId },
-      include: { plan: true },
-    });
-
+    let sub = await prisma.subscription.findUnique({ where: { restaurantId }, include: { plan: true } });
     if (!sub) {
-      // Create default Growth plan trial if missing
-      let plan = await prisma.plan.findUnique({ where: { code: 'PRO' } });
-      if (!plan) {
-        await this.seedStandardPlans();
-        plan = await prisma.plan.findUnique({ where: { code: 'PRO' } });
-      }
-
-      const newSub = await prisma.subscription.create({
-        data: {
-          restaurantId,
-          planId: plan!.id,
-          status: SubscriptionStatus.ACTIVE,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        },
+      // Missing billing state never creates an ACTIVE subscription or a fresh trial.
+      await this.seedStandardPlans();
+      const plan = await prisma.plan.findUniqueOrThrow({ where: { code: 'WEBSITE_SINGLE' } });
+      const restaurant = await prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { createdAt: true } });
+      sub = await prisma.subscription.upsert({
+        where: { restaurantId }, update: {},
+        create: { restaurantId, planId: plan.id, status: SubscriptionStatus.TRIALING, currentPeriodStart: restaurant.createdAt, currentPeriodEnd: trialEndDate(restaurant.createdAt) },
         include: { plan: true },
       });
-      return newSub;
     }
-
-    // Check usage
-    const [currentOutlets, currentUsers, currentMonthOrders] = await Promise.all([
+    const [outlets, users, orders] = await Promise.all([
       prisma.outlet.count({ where: { restaurantId, isActive: true } }),
       prisma.user.count({ where: { restaurantId, isActive: true } }),
-      prisma.order.count({
-        where: {
-          restaurantId,
-          createdAt: {
-            gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          },
-        },
-      }),
+      prisma.order.count({ where: { restaurantId, createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) } } }),
     ]);
-
-    return {
-      ...sub,
-      usage: {
-        outlets: { current: currentOutlets, max: sub.plan.maxOutlets },
-        users: { current: currentUsers, max: sub.plan.maxUsers },
-        ordersThisMonth: { current: currentMonthOrders, max: sub.plan.maxOrdersPerMonth },
-      },
-    };
+    return { ...sub, usage: { outlets: { current: outlets, max: sub.plan.maxOutlets }, users: { current: users, max: sub.plan.maxUsers }, ordersThisMonth: { current: orders, max: sub.plan.maxOrdersPerMonth } } };
   }
 
-  /**
-   * Check if a feature is allowed under current subscription.
-   */
-  static async canPerformAction(
-    restaurantId: string,
-    action: 'ADD_OUTLET' | 'ADD_USER' | 'CREATE_ORDER' | 'ADVANCED_REPORTS'
-  ): Promise<{ allowed: boolean; reason?: string }> {
-    const sub = (await this.getRestaurantSubscription(restaurantId)) as any;
-    if (sub.status !== SubscriptionStatus.ACTIVE && sub.status !== SubscriptionStatus.TRIALING) {
-      return { allowed: false, reason: 'Subscription is inactive or expired.' };
-    }
-
-    if (action === 'ADD_OUTLET' && sub.usage.outlets.current >= sub.usage.outlets.max) {
-      return { allowed: false, reason: `Plan limit reached: max ${sub.usage.outlets.max} outlets allowed.` };
-    }
-
-    if (action === 'ADD_USER' && sub.usage.users.current >= sub.usage.users.max) {
-      return { allowed: false, reason: `Plan limit reached: max ${sub.usage.users.max} staff members allowed.` };
-    }
-
-    if (action === 'CREATE_ORDER' && sub.usage.ordersThisMonth.current >= sub.usage.ordersThisMonth.max) {
-      return { allowed: false, reason: `Monthly order limit reached: ${sub.usage.ordersThisMonth.max} orders allowed.` };
-    }
-
-    if (action === 'ADVANCED_REPORTS' && !sub.plan.hasAdvancedReports) {
-      return { allowed: false, reason: 'Advanced reports are not available on your current plan.' };
-    }
-
+  static async canPerformAction(restaurantId: string, action: 'ADD_OUTLET' | 'ADD_USER' | 'CREATE_ORDER' | 'ADVANCED_REPORTS'): Promise<{ allowed: boolean; reason?: string }> {
+    const sub = await this.getRestaurantSubscription(restaurantId);
+    if (!sub.plan.isAvailable || ![SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING].includes(sub.status as any) || getTrialInfo(sub).expired) return { allowed: false, reason: 'Subscription is inactive, expired or unavailable.' };
+    const usage = action === 'ADD_OUTLET' ? sub.usage.outlets : action === 'ADD_USER' ? sub.usage.users : action === 'CREATE_ORDER' ? sub.usage.ordersThisMonth : null;
+    // null is unlimited. Zero is a hard zero, never mistaken for unlimited.
+    if (usage && usage.max !== null && usage.current >= usage.max) return { allowed: false, reason: 'Your plan limit has been reached.' };
+    if (action === 'ADVANCED_REPORTS' && !sub.plan.hasAdvancedReports) return { allowed: false, reason: 'Advanced reports are not available on your current plan.' };
     return { allowed: true };
   }
 }

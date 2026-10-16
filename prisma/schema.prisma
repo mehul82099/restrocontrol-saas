@@ -12,6 +12,7 @@ enum UserRole {
   MANAGER
   CASHIER
   KITCHEN_STAFF
+  WAITER
   INVENTORY_MANAGER
 }
 
@@ -141,6 +142,10 @@ model Restaurant {
   notifications       Notification[]
   auditLogs           AuditLog[]
   subscription        Subscription?
+  refundRequests      RefundRequest[]
+
+  attendanceSessions AttendanceSession[]
+  staffInvites StaffInvite[]
 
   @@index([slug])
 }
@@ -192,6 +197,9 @@ model User {
   userOutlets UserOutlet[]
   orders      Order[]
   auditLogs   AuditLog[]
+  attendanceSessions AttendanceSession[]
+  invitesCreated StaffInvite[] @relation("InviteCreator")
+  inviteUsed StaffInvite? @relation("InviteUsedBy")
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -214,10 +222,11 @@ model Plan {
   name               String
   code               String   @unique
   priceMonthly       Float    @default(0)
-  priceYearly        Float    @default(0)
-  maxOutlets         Int      @default(1)
-  maxUsers           Int      @default(5)
-  maxOrdersPerMonth  Int      @default(1000)
+  priceYearly        Float?   // null = no annual offer
+  maxOutlets         Int?     // null = unlimited
+  maxUsers           Int?     // null = unlimited
+  maxOrdersPerMonth  Int?     // null = unlimited
+  isAvailable        Boolean  @default(true)
   hasAdvancedReports Boolean  @default(false)
   hasAiFeatures      Boolean  @default(false)
   features           String?  // JSON string
@@ -809,4 +818,100 @@ model AuditLog {
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([restaurantId, action, createdAt])
+}
+
+// Operational intake only. No payment/refund execution fields or money movement.
+model RefundRequest {
+  id               String   @id @default(uuid())
+  restaurantId     String
+  submittedById    String
+  restaurantName   String
+  email            String
+  paymentReference String
+  refundReason     String
+  serviceFeedback  String
+  status           String   @default("SUBMITTED")
+  submittedAt      DateTime @default(now())
+  refundDueAt      DateTime
+  reviewedAt       DateTime?
+  reviewedById     String?
+  restaurant       Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([restaurantId, paymentReference])
+  @@index([status, submittedAt])
+}
+
+// Isolated Razorpay TEST bookkeeping. Never read for production entitlements.
+model TestBillingSubscription {
+  id                 String @id @default(uuid())
+  restaurantId       String @unique
+  providerId         String? @unique
+  planCode           String
+  pendingPlanCode    String?
+  providerStatus     String @default("CREATING")
+  checkoutVerifiedAt DateTime?
+  currentStart       Int?
+  currentEnd         Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+model TestBillingEvent {
+  eventId       String @id
+  providerId    String
+  eventType     String
+  receivedAt    DateTime @default(now())
+}
+
+// Browser capabilities are private. Bind to a specific login, tenant and outlet.
+model StaffPushSubscription {
+  id           String @id @default(uuid())
+  endpoint     String @unique
+  p256dh       String
+  auth         String
+  userId       String
+  restaurantId String
+  outletId     String
+  sessionHash  String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@index([restaurantId, outletId, expiresAt])
+  @@index([sessionHash])
+}
+
+// One attendance record per staff login session, not a verified physical shift.
+model AttendanceSession {
+  id String @id @default(uuid())
+  restaurantId String
+  userId String
+  staffName String
+  staffRole String
+  outletId String?
+  checkedInAt DateTime @default(now())
+  expiresAt DateTime
+  checkedOutAt DateTime?
+  checkoutReason String?
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([restaurantId, checkedInAt, id])
+  @@index([userId, expiresAt])
+}
+
+// One link per staff member: single-use, 48h expiry, role preset. Only the SHA-256 of the token is stored.
+model StaffInvite {
+  id           String    @id @default(uuid())
+  restaurantId String
+  tokenHash    String    @unique
+  role         UserRole
+  label        String?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  usedAt       DateTime?
+  usedById     String?   @unique
+  revokedAt    DateTime?
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  usedBy       User?      @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
+  @@index([restaurantId, createdAt])
 }

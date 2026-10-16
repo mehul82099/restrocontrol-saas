@@ -1,0 +1,42 @@
+[
+  {
+    "code": "WEBSITE_SINGLE",
+    "name": "1 outlet setup",
+    "price": 499,
+    "upcoming": false,
+    "description": "Website access for 1 outlet with unlimited staff and monthly orders.",
+    "maxOutlets": 1,
+    "maxUsers": null,
+    "maxOrdersPerMonth": null
+  },
+  {
+    "code": "WEBSITE_MULTI",
+    "name": "Unlimited outlets",
+    "price": 699,
+    "upcoming": false,
+    "description": "Website access with unlimited outlets, staff and monthly orders.",
+    "maxOutlets": null,
+    "maxUsers": null,
+    "maxOrdersPerMonth": null
+  },
+  {
+    "code": "APP_SINGLE",
+    "name": "App + website access",
+    "price": 699,
+    "upcoming": true,
+    "description": "App + website access. Upcoming, not available for purchase.",
+    "maxOutlets": null,
+    "maxUsers": null,
+    "maxOrdersPerMonth": null
+  },
+  {
+    "code": "APP_MULTI",
+    "name": "App + website, 2+ outlets",
+    "price": 999,
+    "upcoming": true,
+    "description": "App + website access for 2 or more outlets. Upcoming, not available for purchase.",
+    "maxOutlets": null,
+    "maxUsers": null,
+    "maxOrdersPerMonth": null
+  }
+]
