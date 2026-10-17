@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { MIN_WAKE_MS, liveCheckDelay, liveIdleDelay, shouldCheckLive } from '@/lib/live-order-policy';
+import { FALLBACK_MS, MIN_WAKE_MS, liveCheckDelay, liveIdleDelay, shouldCheckLive } from '@/lib/live-order-policy';
 import { apiFetch } from '@/lib/api-fetch';
 
 export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string}) {
@@ -68,10 +68,14 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
       // Repeated focus/online events cannot turn into an unbounded polling loop.
       schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
     };
-    // A touch or keypress on an idle-stretched screen triggers one prompt check;
-    // while the cadence is already short it only resets the idle counter, so
-    // busy screens never poll faster than before.
-    const activity = () => { if (idlePolls > 0) wake(); };
+    // A touch or keypress on an idle-stretched screen pulls the next check forward,
+    // but never ahead of the base cadence, so busy screens cannot poll faster than
+    // the old fixed timer no matter how often they are touched.
+    const activity = () => {
+      if (idlePolls === 0) return;
+      idlePolls = 0;
+      if (Date.now() - lastCheck >= FALLBACK_MS) schedule(0);
+    };
     const onPush = (event: MessageEvent) => {
       if (event.data?.type !== 'staff-order-update' || !shouldCheckLive(!document.hidden, navigator.onLine)) return;
       schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
