@@ -49,7 +49,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What is the refund policy?',
-    a: 'The draft policy is an 80% refund if you are dissatisfied and request it within 7 days of a payment. It applies to the latest payment only, with a separate 7-day window per payment. A feedback form must be submitted first, and the refund is issued within 24 hours of form submission.',
+    a: 'If you are dissatisfied, we offer an 80% refund when you request it within 7 days of a payment. It applies to the latest payment only, with a separate 7-day window per payment. A feedback form must be submitted first, and the refund is issued within 24 hours of form submission.',
   },
 ];
 
