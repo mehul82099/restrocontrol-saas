@@ -11,3 +11,5 @@ export const SITE_TITLE = 'RestroControl | Inventory-First Restaurant POS & Mana
 export const SITE_DESCRIPTION =
   'RestroControl is inventory-first restaurant POS and management software: POS billing, kitchen display, recipe costing, live stock ledger, variance, wastage, purchases and reports. 14-day free trial for new restaurants.';
 export const OG_IMAGE = '/og-image.png';
+
+// Finalised public pages: 2026-10-17.
