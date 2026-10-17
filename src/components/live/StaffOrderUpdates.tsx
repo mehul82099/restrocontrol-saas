@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { MIN_WAKE_MS, liveCheckDelay, shouldCheckLive } from '@/lib/live-order-policy';
+import { MIN_WAKE_MS, liveCheckDelay, liveIdleDelay, shouldCheckLive } from '@/lib/live-order-policy';
 import { apiFetch } from '@/lib/api-fetch';
 
 export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string}) {
@@ -27,7 +27,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
 
   useEffect(() => {
     if (!allowed || !outletId) return;
-    let stopped = false, timer: ReturnType<typeof setTimeout>, revision = '', failures = 0, inFlight = false, lastCheck = 0, denied = false;
+    let stopped = false, timer: ReturnType<typeof setTimeout>, revision = '', failures = 0, inFlight = false, lastCheck = 0, denied = false, idlePolls = 0;
     const controller = new AbortController();
     const emit = () => window.dispatchEvent(new CustomEvent('staff-order-update', {detail: {outletId}}));
     const schedule = (delay: number) => { clearTimeout(timer); if (!stopped && !denied) timer = setTimeout(poll, delay); };
@@ -47,31 +47,41 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
         const data = await res.json();
         if (!data.success || !data.revision) throw new Error();
         if (stopped) return;
-        if ((revision && data.revision !== revision) || failures) {
+        const changed = Boolean(revision && data.revision !== revision);
+        if (changed || failures) {
           emit();
-          if (revision && data.revision !== revision) setToast(user?.role === 'WAITER' ? 'Ready-to-serve tickets updated' : 'Order activity updated');
+          if (changed) setToast(user?.role === 'WAITER' ? 'Ready-to-serve tickets updated' : 'Order activity updated');
         }
+        // Quiet stretches back off stepwise; real activity drops the cadence back to the base delay.
+        idlePolls = changed ? 0 : idlePolls + 1;
         revision = data.revision; failures = 0;
-        setConnection(pushEnabled.current ? 'Push alerts + 5-minute safety check' : 'Automatic check every 2 minutes');
+        setConnection(pushEnabled.current ? 'Push alerts + safety check' : 'Automatic check every 2 minutes while active');
       } catch { if (!stopped) { failures++; setConnection('Reconnecting. Order screens may be out of date.'); } }
       finally { inFlight = false; }
-      if (shouldCheckLive(!document.hidden, navigator.onLine)) schedule(liveCheckDelay(pushEnabled.current, failures));
+      if (shouldCheckLive(!document.hidden, navigator.onLine)) schedule(failures ? liveCheckDelay(pushEnabled.current, failures) : liveIdleDelay(pushEnabled.current, idlePolls));
     };
     const wake = () => {
       if (!shouldCheckLive(!document.hidden, navigator.onLine)) {
         clearTimeout(timer); setConnection(document.hidden ? 'Live updates paused while this tab is hidden' : 'Offline. Order screens may be out of date.'); return;
       }
+      idlePolls = 0;
       // Repeated focus/online events cannot turn into an unbounded polling loop.
       schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
     };
+    // A touch or keypress on an idle-stretched screen triggers one prompt check;
+    // while the cadence is already short it only resets the idle counter, so
+    // busy screens never poll faster than before.
+    const activity = () => { if (idlePolls > 0) wake(); };
     const onPush = (event: MessageEvent) => {
       if (event.data?.type !== 'staff-order-update' || !shouldCheckLive(!document.hidden, navigator.onLine)) return;
       schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));
     };
     poll();
     document.addEventListener('visibilitychange', wake); window.addEventListener('online', wake); window.addEventListener('offline', wake);
+    window.addEventListener('focus', wake); window.addEventListener('pointerdown', activity); window.addEventListener('keydown', activity);
     navigator.serviceWorker?.addEventListener('message', onPush);
-    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); window.removeEventListener('offline', wake); navigator.serviceWorker?.removeEventListener('message', onPush); };
+    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('online', wake); window.removeEventListener('offline', wake);
+      window.removeEventListener('focus', wake); window.removeEventListener('pointerdown', activity); window.removeEventListener('keydown', activity); navigator.serviceWorker?.removeEventListener('message', onPush); };
   }, [allowed, outletId, user?.id]);
 
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 5000); return () => clearTimeout(timer); }, [toast]);
