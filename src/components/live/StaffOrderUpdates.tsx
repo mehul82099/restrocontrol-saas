@@ -35,7 +35,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
       if (inFlight || stopped || denied) return;
       clearTimeout(timer);
       if (!shouldCheckLive(!document.hidden, navigator.onLine)) {
-        setConnection(document.hidden ? 'Updates paused while hidden' : 'Offline. Order screens may be out of date.');
+        setConnection(document.hidden ? 'Live updates paused while this tab is hidden' : 'Offline. Order screens may be out of date.');
         return; // No hidden/offline timer. Resume from visibility/online event.
       }
       inFlight = true; lastCheck = Date.now();
@@ -59,7 +59,7 @@ export function StaffOrderUpdates({user, outletId}: {user: any; outletId: string
     };
     const wake = () => {
       if (!shouldCheckLive(!document.hidden, navigator.onLine)) {
-        clearTimeout(timer); setConnection(document.hidden ? 'Updates paused while hidden' : 'Offline. Order screens may be out of date.'); return;
+        clearTimeout(timer); setConnection(document.hidden ? 'Live updates paused while this tab is hidden' : 'Offline. Order screens may be out of date.'); return;
       }
       // Repeated focus/online events cannot turn into an unbounded polling loop.
       schedule(Math.max(0, MIN_WAKE_MS - (Date.now() - lastCheck)));

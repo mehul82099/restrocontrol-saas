@@ -15,9 +15,9 @@ function hasWebGL() {
 }
 
 // 3D miniature restaurant when the device supports WebGL, otherwise the lightweight SVG version.
-export default function Landing() {
+export default function Landing({ withFooter = true }: { withFooter?: boolean }) {
   const [mode, setMode] = useState<'check' | '3d' | 'svg'>('check');
   useEffect(() => setMode(hasWebGL() ? '3d' : 'svg'), []);
   if (mode === 'check') return <div className="min-h-screen bg-[#f3ede0]" />;
-  return <>{mode === '3d' ? <Landing3D /> : <LandingSvg />}<SiteFooter /></>;
+  return <>{mode === '3d' ? <Landing3D /> : <LandingSvg />}{withFooter && <SiteFooter />}</>;
 }

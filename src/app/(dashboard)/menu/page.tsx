@@ -252,11 +252,22 @@ export default function MenuPage() {
         {loading ? (
           <div className="p-12 text-center text-slate-400">Loading catalog...</div>
         ) : filtered.length === 0 ? (
+          items.length === 0 ? (
+            <div className="p-12 text-center">
+              <Layers className="w-12 h-12 mx-auto text-emerald-500 mb-3" />
+              <p className="text-base font-black text-slate-900">Add your first dish</p>
+              <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto leading-6">
+                Your menu is empty. Three quick steps: 1) tap <strong>Add Category</strong> (for example Curries or Breads),
+                2) tap <strong>Add Menu Item</strong> and set the dish name and selling price, 3) the dish appears on the POS, ready to bill.
+              </p>
+            </div>
+          ) : (
           <div className="p-12 text-center text-slate-400">
             <Layers className="w-12 h-12 mx-auto text-slate-300 mb-3" />
             <p className="text-base font-semibold text-slate-700">No dishes in this category</p>
             <p className="text-sm text-slate-500 mt-1">Add items or change your search filter.</p>
           </div>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">

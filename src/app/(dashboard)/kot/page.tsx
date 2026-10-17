@@ -114,7 +114,7 @@ export default function KotPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400">
-            Automatic order updates • Updated {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}
+            Automatic order updates • Updated {lastRefreshed?.toLocaleTimeString() || 'waiting for first update'}
           </span>
           <button
             onClick={fetchTickets}
@@ -126,7 +126,7 @@ export default function KotPage() {
         </div>
       </div>
 
-      {error && <p role="alert" className="p-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl">{error} Display may be stale. Last successful update: {lastRefreshed?.toLocaleTimeString() || 'not yet successful'}.</p>}
+      {error && <p role="alert" className="p-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl">{error} Display may be stale. Last successful update: {lastRefreshed?.toLocaleTimeString() || 'waiting for first update'}.</p>}
       {/* Ticket Grid */}
       {loading && tickets.length === 0 ? (
         <div className="h-64 flex items-center justify-center">

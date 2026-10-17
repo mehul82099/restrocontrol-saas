@@ -49,7 +49,7 @@ function Panel({ stop }: { stop: StopId }) {
       return (
         <>
           <p className="text-[11px] font-bold uppercase tracking-[.2em] text-emerald-700">Restaurant POS + inventory</p>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-stone-900 leading-[1.05]">Your restaurant,<br /><span className="text-emerald-600">under control.</span></h1>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight text-stone-900 leading-[1.05]">Your restaurant,<br /><span className="text-emerald-600">under control.</span></h2>
           <p className="mt-3 text-sm text-stone-600">Know what you sold, what the recipes should have used, what was actually used, and where the gap is.</p>
           <div className="mt-4 flex flex-col sm:flex-row gap-2.5">
             <Cta href="/signup">Start 14-day free trial <ArrowRight className="w-4 h-4" /></Cta>

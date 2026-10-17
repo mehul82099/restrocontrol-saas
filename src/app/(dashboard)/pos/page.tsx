@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-fetch';
 import { Scale } from 'lucide-react';
 import { recoveryKey, decodeRecovery } from '@/lib/pos-recovery';
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useOutlet } from '../layout';
 import {
   Search,
@@ -496,9 +497,26 @@ export default function PosPage() {
               <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : filteredItems.length === 0 ? (
+            items.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center px-6">
+                <div className="max-w-sm bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm">
+                  <p className="text-base font-black text-slate-900">Add your first dish to start billing</p>
+                  <p className="mt-2 text-xs text-slate-500 font-medium leading-5">
+                    Your menu is empty. Add a dish with its price in the Menu Catalog and it appears here, ready to tap into an order.
+                  </p>
+                  <Link
+                    href="/menu"
+                    className="mt-4 inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow"
+                  >
+                    Open Menu Catalog
+                  </Link>
+                </div>
+              </div>
+            ) : (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
               <p>No dishes match your filter.</p>
             </div>
+            )
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
               {filteredItems.map((item) => {

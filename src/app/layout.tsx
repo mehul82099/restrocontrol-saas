@@ -1,10 +1,26 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, OG_IMAGE } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'RestroControl | Inventory-First Restaurant POS & Management SaaS',
-  description: 'Know what your restaurant sold, what recipes should have consumed, what was actually consumed, and where variance occurred.',
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
+  openGraph: {
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    type: 'website',
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'RestroControl - your restaurant, under control' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE],
+  },
 };
 
 export const viewport: Viewport = {
