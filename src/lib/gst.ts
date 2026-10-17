@@ -4,6 +4,11 @@
 export const GST_RATE_BPS = 1800; // 18% in basis points
 export const GST_RATE_LABEL = '18%';
 
+// GSTIN: Mystify me is not GST-registered yet. When Mehul shares the GSTIN,
+// set it here and surface it on policy pages and invoices. Keep null until then;
+// no page may show a GSTIN while this is null.
+export const GSTIN: string | null = null;
+
 export interface PriceBreakup {
   basePaise: number;
   gstPaise: number;
