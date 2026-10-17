@@ -151,9 +151,11 @@ async function main() {
    assert.equal((await live(waiterReq('/api/live/orders'))).status,403);
    await prisma.userOutlet.create({data:{userId:waiter.id,outletId:outlet.id}});
  });
- await test('Free-tier timer policy uses 2m fallback, 5m push safety, backoff and no hidden/offline checks',async()=>{
-   const {liveCheckDelay,shouldCheckLive}=jiti('../src/lib/live-order-policy');
+ await test('Free-tier timer policy uses 2m fallback, 5m push safety, idle stretch, backoff and no hidden/offline checks',async()=>{
+   const {liveCheckDelay,liveIdleDelay,shouldCheckLive}=jiti('../src/lib/live-order-policy');
    assert.equal(liveCheckDelay(false),120000);assert.equal(liveCheckDelay(true),300000);assert.equal(liveCheckDelay(false,1),240000);assert.equal(liveCheckDelay(false,10),900000);
+   assert.equal(liveIdleDelay(false,0),120000);assert.equal(liveIdleDelay(false,1),240000);assert.equal(liveIdleDelay(false,2),300000);assert.equal(liveIdleDelay(false,9),300000);
+   assert.equal(liveIdleDelay(true,0),300000);assert.equal(liveIdleDelay(true,1),600000);assert.equal(liveIdleDelay(true,5),600000);assert.equal(liveIdleDelay(false,-4),120000);
    for(const state of [[false,true],[true,false],[false,false]])assert.equal(shouldCheckLive(...state),false);assert.equal(shouldCheckLive(true,true),true);
  });
  console.log(passed+' LIVE ORDER / PUSH REGRESSIONS PASSED');
