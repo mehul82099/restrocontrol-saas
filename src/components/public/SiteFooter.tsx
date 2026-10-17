@@ -17,7 +17,7 @@ export default function SiteFooter() {
             {publicLinks.map(([label, href]) => <Link key={href} href={href} className="rounded underline-offset-4 hover:text-emerald-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600">{label}</Link>)}
           </nav>
         </div>
-        <p className="mt-6 text-xs text-stone-500">Policy preview for review. Commercial terms are not final and online subscription checkout is not enabled by these pages.</p>
+        <p className="mt-6 text-xs text-stone-500">© 2026 Mystify me, Jaipur, Rajasthan, India.</p>
       </div>
     </footer>
   );
