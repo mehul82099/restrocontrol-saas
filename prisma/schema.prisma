@@ -928,3 +928,24 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, createdAt])
 }
+
+// LIVE (real money) Razorpay billing. Additive; separate from the TEST tables.
+model LiveBillingSubscription {
+  id                 String @id @default(uuid())
+  restaurantId       String @unique
+  providerId         String? @unique
+  planCode           String
+  pendingPlanCode    String?
+  providerStatus     String @default("CREATING")
+  checkoutVerifiedAt DateTime?
+  currentStart       Int?
+  currentEnd         Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+model LiveBillingEvent {
+  eventId    String @id
+  providerId String
+  eventType  String
+  receivedAt DateTime @default(now())
+}
