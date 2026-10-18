@@ -11,7 +11,8 @@ async function owner(req: NextRequest) {
   return { auth: r.auth };
 }
 async function json(req: NextRequest) { const t = await req.text(); if (t.length > 4096) throw new Error('Request too large.'); return JSON.parse(t || '{}'); }
-export async function GET(req: NextRequest, { params }: { params: { action: string } }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ action: string }> }) {
+  const params = await ctx.params;
   if (params.action === 'status') { // public, tells the UI whether to show the checkout button
     return NextResponse.json({ success: true, enabled: liveEnabled() }, { headers: { 'Cache-Control': 'no-store' } });
   }
@@ -19,7 +20,8 @@ export async function GET(req: NextRequest, { params }: { params: { action: stri
   const { auth, error } = await owner(req); if (error || !auth) return error;
   return NextResponse.json({ success: true, key: liveConfig().key, subscription: await prisma.liveBillingSubscription.findUnique({ where: { restaurantId: auth.restaurantId } }) }, { headers: { 'Cache-Control': 'no-store' } });
 }
-export async function POST(req: NextRequest, { params }: { params: { action: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ action: string }> }) {
+  const params = await ctx.params;
   if (params.action === 'webhook') return webhook(req);
   const { auth, error } = await owner(req); if (error || !auth) return error;
   try {
