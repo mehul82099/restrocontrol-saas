@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import Landing from '@/components/world/Landing';
 import SiteFooter from '@/components/public/SiteFooter';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, OG_IMAGE } from '@/lib/seo';
 
@@ -97,8 +96,8 @@ function Cta({ href, children, primary = true }: { href: string; children: React
       href={href}
       className={
         primary
-          ? 'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-900/20'
-          : 'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-stone-50 text-emerald-800 font-bold text-sm border border-emerald-600/30'
+          ? 'inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#c0392b] hover:bg-[#a32f23] text-[#fff8ee] font-bold text-[15px] shadow-[0_14px_34px_rgba(59,29,18,.14)]'
+          : 'inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-transparent text-[#3b1d12] font-bold text-[15px] border-[1.5px] border-[rgba(59,29,18,.16)]'
       }
     >
       {children}
@@ -106,37 +105,63 @@ function Cta({ href, children, primary = true }: { href: string; children: React
   );
 }
 
+const STATS: { label: string; value: string; accent?: boolean }[] = [
+  { label: 'Free trial', value: '14 days' },
+  { label: 'Plans from', value: '\u20B9499 + GST/mo', accent: true },
+  { label: 'Staff roles', value: '5' },
+  { label: 'Card at signup', value: 'None' },
+];
+
 export default function LandingPage() {
   return (
-    <div className="bg-[#f3ede0] text-stone-900 selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-[#f7ead9] text-[#3b1d12] selection:bg-emerald-600 selection:text-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
 
-      {/* Interactive 3D walkthrough (client enhancement) */}
-      <Landing withFooter={false} />
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-[rgba(59,29,18,.16)]">
+        <Link href="/" className="font-display font-bold text-[19px] tracking-tight">
+          Restro<em className="italic text-[#c0392b]">Control</em>
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/pricing" className="hidden sm:block text-[13px] font-semibold text-[#7a5138] hover:text-[#3b1d12]">Pricing</Link>
+          <Link href="/login" className="hidden sm:block text-[13px] font-semibold text-[#7a5138] hover:text-[#3b1d12]">Sign in</Link>
+          <Link href="/signup" className="rounded-full bg-[#c0392b] hover:bg-[#a32f23] text-[#fff8ee] text-[13px] font-bold px-4 py-2">Free trial</Link>
+        </div>
+      </nav>
 
       <main id="main-content">
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-5 pt-14 pb-10 sm:px-8 sm:pt-20">
-          <p className="text-[11px] font-bold uppercase tracking-[.2em] text-emerald-700">Restaurant POS + inventory</p>
-          <h1 className="mt-2 text-3xl sm:text-5xl font-black tracking-tight text-stone-900 leading-[1.08]">
-            Your restaurant, <span className="text-emerald-600">under control.</span>
+        <section className="mx-auto max-w-3xl px-6 pt-16 pb-12 sm:pt-24 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[3px] text-[#c0392b]">Restaurant POS + Inventory</p>
+          <h1 className="font-display mt-4 font-medium leading-[1.02] tracking-tight text-[clamp(2.5rem,7vw,4.5rem)]">
+            Your restaurant,<br className="hidden sm:block" /> <span className="italic text-[#c0392b]">under control.</span>
           </h1>
-          <p className="mt-4 max-w-2xl text-base sm:text-lg leading-relaxed text-stone-600">
-            Know what you sold, what the recipes should have used, what was actually used, and where the gap is.
+          <p className="mx-auto mt-5 max-w-[420px] text-[15px] leading-relaxed text-[#7a5138]">
+            Know what you sold, what it should have used, what it actually used, and where the gap is.
           </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-2.5">
-            <Cta href="/signup">Start 14-day free trial <ArrowRight className="w-4 h-4" /></Cta>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Cta href="/signup">Start 14-day free trial</Cta>
             <Cta href="/login" primary={false}>Sign in</Cta>
           </div>
-          <p className="mt-2 text-xs text-stone-500">No card needed.</p>
+          <p className="mt-3.5 text-xs text-[#7a5138]">No card needed. Made for small cafes and QSRs.</p>
+        </section>
+
+        {/* Quick facts */}
+        <section aria-label="Quick facts" className="mx-auto grid max-w-[760px] grid-cols-2 gap-2.5 px-6 pb-12 sm:grid-cols-4">
+          {STATS.map((s) => (
+            <div key={s.label} className="rounded-[14px] border border-[rgba(59,29,18,.16)] bg-[#fff8ee] px-3.5 py-3">
+              <span className="block text-[10px] font-semibold uppercase tracking-[1.5px] text-[#7a5138]">{s.label}</span>
+              <b className={`mt-1 block text-lg sm:text-[22px] font-bold ${s.accent ? 'text-[#c0392b]' : 'text-[#3b1d12]'}`}>{s.value}</b>
+            </div>
+          ))}
         </section>
 
         {/* What it is */}
         <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">What is RestroControl?</h2>
-          <p className="mt-4 max-w-3xl leading-7 text-stone-600">
+          <h2 className="font-display text-2xl sm:text-4xl font-medium tracking-tight">What is RestroControl?</h2>
+          <p className="mt-4 max-w-3xl leading-7 text-[15px] text-[#7a5138]">
             RestroControl is restaurant-management software from Mystify me. It brings POS, orders, kitchen display,
             recipe costing, stock tracking, purchases and reports into one browser-based application, so daily
             operations and ingredient costs stay visible in one place.
@@ -145,8 +170,8 @@ export default function LandingPage() {
 
         {/* Who it is for */}
         <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">Who is it for?</h2>
-          <p className="mt-4 max-w-3xl leading-7 text-stone-600">
+          <h2 className="font-display text-2xl sm:text-4xl font-medium tracking-tight">Who is it for?</h2>
+          <p className="mt-4 max-w-3xl leading-7 text-[15px] text-[#7a5138]">
             Restaurant owners and their teams, including small cafes and quick-service restaurants. Role-based
             accounts let owners, managers, cashiers, kitchen staff and inventory managers each see the tools for
             their job, and compare expected ingredient use with recorded stock movements.
@@ -155,14 +180,14 @@ export default function LandingPage() {
 
         {/* Features */}
         <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">Everything from counter to kitchen</h2>
+          <h2 className="font-display text-2xl sm:text-4xl font-medium tracking-tight">Everything from counter to kitchen</h2>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <div key={f.title} className="rounded-2xl border border-stone-200 bg-white/80 p-5">
-                <h3 className="flex items-center gap-2 text-base font-bold text-stone-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> {f.title}
+              <div key={f.title} className="rounded-[22px] border border-[rgba(59,29,18,.16)] bg-[#fff8ee] p-5 shadow-[0_14px_34px_rgba(59,29,18,.14)]">
+                <h3 className="flex items-center gap-2 text-[15px] font-bold text-[#3b1d12]">
+                  <CheckCircle2 className="w-4 h-4 text-[#c0392b] shrink-0" /> {f.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-stone-600">{f.text}</p>
+                <p className="mt-2 text-[13px] leading-6 text-[#7a5138]">{f.text}</p>
               </div>
             ))}
           </div>
@@ -170,8 +195,8 @@ export default function LandingPage() {
 
         {/* Pricing teaser */}
         <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">Simple pricing, GST shown upfront</h2>
-          <p className="mt-4 max-w-3xl leading-7 text-stone-600">
+          <h2 className="font-display text-2xl sm:text-4xl font-medium tracking-tight">Simple pricing, GST shown upfront</h2>
+          <p className="mt-4 max-w-3xl leading-7 text-[15px] text-[#7a5138]">
             Website plans start at Rs 499 + 18% GST per month (Rs 588.82 total) for one outlet, or Rs 699 + 18% GST
             (Rs 824.82 total) for unlimited outlets. Both include unlimited staff and orders. Start with a 14-day
             free trial - no card needed.
@@ -181,12 +206,12 @@ export default function LandingPage() {
 
         {/* FAQ */}
         <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">Frequently asked questions</h2>
+          <h2 className="font-display text-2xl sm:text-4xl font-medium tracking-tight">Frequently asked questions</h2>
           <div className="mt-6 space-y-4 max-w-3xl">
             {FAQS.map((f) => (
-              <details key={f.q} className="rounded-2xl border border-stone-200 bg-white/80 p-5">
-                <summary className="cursor-pointer text-base font-bold text-stone-900">{f.q}</summary>
-                <p className="mt-3 text-sm leading-6 text-stone-600">{f.a}</p>
+              <details key={f.q} className="rounded-[22px] border border-[rgba(59,29,18,.16)] bg-[#fff8ee] p-5">
+                <summary className="cursor-pointer text-[15px] font-bold text-[#3b1d12]">{f.q}</summary>
+                <p className="mt-3 text-[13px] leading-6 text-[#7a5138]">{f.a}</p>
               </details>
             ))}
           </div>
