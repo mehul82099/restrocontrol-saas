@@ -1,33 +1,22 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { Scale } from 'lucide-react';
 
-const Scene3D = dynamic(() => import('./Scene3D'), { ssr: false });
-
+// Tapri Warm auth shell: cream page, serif wordmark, one warm card.
 export default function WorldAuthShell({ children }: { children: React.ReactNode }) {
-  const [reduced, setReduced] = React.useState(false);
-  const [mobile, setMobile] = React.useState(false);
-  React.useEffect(() => {
-    setReduced(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
-    setMobile(window.matchMedia?.('(max-width: 768px)').matches ?? false);
-  }, []);
   return (
-    <div className="relative min-h-screen bg-[#f3ede0] overflow-hidden selection:bg-emerald-500 selection:text-white">
-      <div className="fixed inset-0" style={{ filter: 'blur(1.5px)' }}>
-        <Scene3D stop="overview" reduced={reduced} mobile={mobile} />
-      </div>
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(243,237,224,.35),rgba(243,237,224,.88)_85%)]" />
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4 py-10">
-        <Link href="/" className="mb-5 flex items-center gap-2.5">
-          <span className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-900/20"><Scale className="w-5 h-5" /></span>
-          <span className="text-lg font-black tracking-tight text-stone-900">Restro<span className="text-emerald-600">Control</span></span>
+    <div className="relative min-h-screen overflow-hidden bg-[#f7ead9] text-[#3b1d12] selection:bg-emerald-600 selection:text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(192,57,43,.08),transparent_55%)]"
+      />
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4 py-10">
+        <Link href="/" className="mb-5 font-display text-[22px] font-bold tracking-tight">
+          Restro<em className="italic text-[#c0392b]">Control</em>
         </Link>
-        <div className="w-full max-w-md bg-white/92 backdrop-blur-md border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-stone-900/15 text-stone-900">
+        <div className="w-full max-w-md rounded-[22px] border border-[rgba(59,29,18,.16)] bg-[#fff8ee] p-6 shadow-[0_14px_34px_rgba(59,29,18,.14)] sm:p-8">
           {children}
         </div>
+        <p className="mt-5 text-xs text-[#7a5138]">14-day free trial · {'\u20B9'}499 + GST/month · No card needed</p>
       </div>
     </div>
   );

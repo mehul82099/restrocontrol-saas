@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from 'next';
+import { Fraunces } from 'next/font/google';
 import './globals.css';
 import { SITE_URL, SITE_NAME, SITE_TITLE, SITE_DESCRIPTION, OG_IMAGE } from '@/lib/seo';
+
+const displayFont = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -26,7 +33,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0f172a',
+  themeColor: '#f7ead9',
 };
 
 export default function RootLayout({
@@ -36,7 +43,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased selection:bg-emerald-500 selection:text-white">
+      <body className={`antialiased selection:bg-emerald-600 selection:text-white ${displayFont.variable}`}>
         {children}
       </body>
     </html>
