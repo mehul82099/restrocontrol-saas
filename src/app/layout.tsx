@@ -11,6 +11,7 @@ const displayFont = Fraunces({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  verification: { google: 'ccCX3vMNTDjUAz1uMvF8Kt1zByjd_S289WbrbMXIFJQ' },
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   manifest: '/manifest.json',
