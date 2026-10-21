@@ -52,6 +52,16 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
+// The site name is separate from the legal/business Organization name.
+// Google supports site names for subdomains, including the current Vercel URL.
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_NAME,
+  alternateName: 'Restro Control',
+  url: `${SITE_URL}/`,
+};
+
 const organizationLd = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
@@ -115,6 +125,7 @@ const STATS: { label: string; value: string; accent?: boolean }[] = [
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#f7ead9] text-[#3b1d12] selection:bg-emerald-600 selection:text-white">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
