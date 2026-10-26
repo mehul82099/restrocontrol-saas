@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const jiti = require('jiti')(__filename, {alias: {'@': require('path').resolve(__dirname, '../src')}});
 const {prisma} = jiti('../src/server/db/prisma');
 const {verifyToken} = jiti('../src/server/auth/jwt');
+const {issueAttendanceToken} = jiti('../src/server/services/attendance.service');
 const svc = jiti('../src/server/services/invite.service');
 const {POST: register} = jiti('../src/app/api/auth/register/route');
 const {POST: createInvite, GET: listInvites} = jiti('../src/app/api/staff-invites/route');
@@ -29,7 +30,7 @@ async function main() {
   const managerUser = await prisma.user.create({data: {restaurantId: restA, email: `mgr-${sfx}@example.com`, name: 'Mgr', role: 'MANAGER', passwordHash: 'x'}});
   const outletA = await prisma.outlet.findFirst({where: {restaurantId: restA}});
   await prisma.userOutlet.create({data: {userId: managerUser.id, outletId: outletA.id}});
-  const mgrTok = require('jsonwebtoken').sign({userId: managerUser.id, restaurantId: restA, role: 'MANAGER', email: managerUser.email, name: 'Mgr', outletId: outletA.id}, process.env.JWT_SECRET, {expiresIn: '1h'});
+  const mgrTok = await issueAttendanceToken({userId: managerUser.id, restaurantId: restA, role: 'MANAGER', email: managerUser.email, name: 'Mgr', outletId: outletA.id});
   const create = async (tok, role, label) => { const r = await createInvite(req('/api/staff-invites', {body: {role, label}, token: tok})); return {status: r.status, body: await r.json()}; };
   const tokenFromLink = (l) => l.split('/join/')[1];
 
