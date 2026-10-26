@@ -26,6 +26,7 @@ const nextConfig = {
       {key: 'X-Frame-Options', value: 'DENY'},
       {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
       {key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()'},
+      {key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'"},
       {key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"},
     ]}, {source: '/api/:path*', headers: [{key: 'Cache-Control', value: 'private, no-store'}]},
       ...NOINDEX_ROUTES.map((route) => ({
