@@ -10,7 +10,7 @@ export const GET = protectRead(async (req: NextRequest) => {
   const bearer = req.headers.get('authorization');
   const token = bearer?.startsWith('Bearer ') ? bearer.slice(7) : req.cookies.get('token')?.value;
   const payload = token ? verifyToken(token) : null;
-  if (!payload?.userId || !payload.restaurantId) return NextResponse.json({success: false}, {status: 401});
+  if (!payload?.userId || !payload.restaurantId || !payload.authSessionId) return NextResponse.json({success: false}, {status: 401});
   const requested = req.headers.get('x-outlet-id') || new URL(req.url).searchParams.get('outletId') || null;
   const rows = await prisma.$queryRaw<Array<{status: number; revision: unknown}>>`
     WITH authority AS (
@@ -29,6 +29,13 @@ export const GET = protectRead(async (req: NextRequest) => {
         LIMIT 1
       ) o ON true
       WHERE u.id = ${payload.userId} AND u."restaurantId" = ${payload.restaurantId} AND u."isActive" = true
+        AND EXISTS (SELECT 1 FROM "AuthSession" login WHERE login.id = ${payload.authSessionId}
+          AND login."userId" = u.id AND login."restaurantId" = u."restaurantId"
+          AND login."authVersion" = u."authVersion" AND login."revokedAt" IS NULL AND login."expiresAt" > NOW())
+        AND ((u.role = 'OWNER' AND ${payload.attendanceSessionId || null}::text IS NULL) OR EXISTS (
+          SELECT 1 FROM "AttendanceSession" attendance WHERE attendance.id = ${payload.attendanceSessionId || ''}
+            AND attendance."userId" = u.id AND attendance."restaurantId" = u."restaurantId"
+            AND attendance."checkedOutAt" IS NULL AND attendance."expiresAt" > NOW()))
     ), permitted AS (
       SELECT * FROM authority WHERE outlet_id IS NOT NULL
         AND role::text IN ('OWNER','MANAGER','CASHIER','KITCHEN_STAFF','WAITER')
