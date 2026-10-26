@@ -7,7 +7,7 @@ const webpush = require('web-push');
 const keys = webpush.generateVAPIDKeys();
 process.env.WEB_PUSH_PUBLIC_KEY = keys.publicKey; process.env.WEB_PUSH_PRIVATE_KEY = keys.privateKey; process.env.WEB_PUSH_SUBJECT = 'mailto:test@example.invalid';
 const {prisma} = jiti('../src/server/db/prisma');
-const {signToken} = jiti('../src/server/auth/jwt');
+const {issueAttendanceToken} = jiti('../src/server/services/attendance.service');
 const {sessionHash, validPushEndpoint, orderAudience} = jiti('../src/server/services/push-policy');
 const {GET: live} = jiti('../src/app/api/live/orders/route');
 const {POST: subscribe, DELETE: unsubscribe} = jiti('../src/app/api/push/subscription/route');
@@ -22,8 +22,8 @@ async function main() {
  const owner = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'OWNER'}});
  const kitchen = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'KITCHEN_STAFF'}});
  const inventory = await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'INVENTORY_MANAGER'}});
- const token = u => signToken({userId:u.id,restaurantId:u.restaurantId,role:u.role,email:u.email,name:u.name,outletId:outlet.id});
- const ownerToken = token(owner), kitchenToken = token(kitchen);
+ const token = async u => issueAttendanceToken({userId:u.id,restaurantId:u.restaurantId,role:u.role,email:u.email,name:u.name,outletId:outlet.id});
+ let ownerToken = await token(owner); const kitchenToken = await token(kitchen);
  const req = (route, tok = ownerToken, method = 'GET', body, out = outlet.id, origin) => new NextRequest('http://localhost:3000'+route, {method, headers:{cookie:`token=${tok}`, 'x-outlet-id':out, ...(origin?{origin}:{}), ...(body?{'content-type':'application/json'}:{})}, ...(body?{body:JSON.stringify(body)}:{})});
  const body = {endpoint:'https://fcm.googleapis.com/fcm/send/local-test-only',keys:{p256dh:keys.publicKey,auth:Buffer.alloc(16,7).toString('base64url')}};
  const revision = async () => (await (await live(req('/api/live/orders'))).json()).revision;
@@ -32,7 +32,7 @@ async function main() {
    assert.equal(validPushEndpoint(body.endpoint),true);
  });
  await test('Only order-facing roles in audience',async()=>{for(const role of ['OWNER','MANAGER','CASHIER','KITCHEN_STAFF','WAITER'])assert.equal(orderAudience(role),true);assert.equal(orderAudience('INVENTORY_MANAGER'),false);});
- await test('Live feed requires authenticated user and permitted role', async()=>{assert.equal((await live(req('/api/live/orders','invalid'))).status,401);assert.equal((await live(req('/api/live/orders',token(inventory)))).status,403);assert.equal((await live(req('/api/live/orders',kitchenToken))).status,200);});
+ await test('Live feed requires authenticated user and permitted role', async()=>{assert.equal((await live(req('/api/live/orders','invalid'))).status,401);assert.equal((await live(req('/api/live/orders',await token(inventory)))).status,403);assert.equal((await live(req('/api/live/orders',kitchenToken))).status,200);});
  await test('Foreign outlet rejected',async()=>{assert.equal((await live(req('/api/live/orders',ownerToken,'GET',undefined,'foreign'))).status,403);});
  await test('Revision changes after create, cancel and kitchen updates',async()=>{
    const start=await revision(); const order=await prisma.order.create({data:{restaurantId:restaurant.id,outletId:outlet.id,orderNumber:'LIVE-'+Date.now(),orderType:'TAKEAWAY',subtotal:1,totalAmount:1,status:'CONFIRMED'}});
@@ -56,6 +56,7 @@ async function main() {
  await test('Disabled staff cannot receive queued push',async()=>{await prisma.user.update({where:{id:owner.id},data:{isActive:false}});assert.equal((await current(req('/api/push/current?id='+id))).status,401);await prisma.user.update({where:{id:owner.id},data:{isActive:true}});});
  await test('Unassigned outlet revokes queued push',async()=>{await prisma.outlet.update({where:{id:outlet.id},data:{isActive:false}});assert.equal((await current(req('/api/push/current?id='+id))).status,403);await prisma.outlet.update({where:{id:outlet.id},data:{isActive:true}});});
  await test('Logout deletes subscriptions for this session and cookie',async()=>{const response=await logout(req('/api/auth/logout',ownerToken,'POST'));assert.equal(response.status,200);assert(response.headers.get('set-cookie').includes('token='));assert.equal(await prisma.staffPushSubscription.count({where:{sessionHash:sessionHash(ownerToken)}}),0);assert.equal((await current(req('/api/push/current?id='+id))).status,401);});
+ ownerToken = await token(owner);
  await test('Expired subscription cannot display',async()=>{await subscribe(req('/api/push/subscription',ownerToken,'POST',body));const row=await prisma.staffPushSubscription.findUnique({where:{endpoint:body.endpoint}});await prisma.staffPushSubscription.update({where:{id:row.id},data:{expiresAt:new Date(0)}});assert.equal((await current(req('/api/push/current?id='+row.id))).status,401);});
  await test('Push off by default without keys; order path does not throw',async()=>{const key=process.env.WEB_PUSH_PRIVATE_KEY;delete process.env.WEB_PUSH_PRIVATE_KEY;await notifyOrderStaff(restaurant.id,outlet.id);process.env.WEB_PUSH_PRIVATE_KEY=key;});
  await test('Unsubscribe removes only current login subscriptions',async()=>{await subscribe(req('/api/push/subscription',ownerToken,'POST',body));assert.equal((await unsubscribe(req('/api/push/subscription',ownerToken,'DELETE'))).status,200);assert.equal(await prisma.staffPushSubscription.count({where:{sessionHash:sessionHash(ownerToken)}}),0);});
@@ -91,7 +92,7 @@ async function main() {
  const {POST: refund}=jiti('../src/app/api/orders/[id]/refund/route');
  const {POST: createUser}=jiti('../src/app/api/users/route');
  const waiter=await prisma.user.create({data:{restaurantId:restaurant.id,role:'WAITER',email:'waiter-'+Date.now()+'@invalid.test',passwordHash:'test-only-no-login',name:'Local Waiter',userOutlets:{create:{outletId:outlet.id}}}});
- const wt=token(waiter);
+ const wt=await token(waiter);
  const waiterReq=(route,method='GET',body,out=outlet.id)=>req(route,wt,method,body,out);
  const dish=await prisma.menuItem.findFirst({where:{restaurantId:restaurant.id,isAvailable:true}});
  const input=()=>({idempotencyKey:'WAITER-'+waiter.id+'-'+require('crypto').randomUUID(),orderType:'TAKEAWAY',items:[{menuItemId:dish.id,quantity:1}]});
@@ -130,7 +131,7 @@ async function main() {
  });
  await test('Manager can assign Waiter but Waiter cannot self-escalate',async()=>{
    const manager=await prisma.user.findFirst({where:{restaurantId:restaurant.id,role:'MANAGER'}});
-   const response=await createUser(req('/api/users',token(manager),'POST',{name:'Waiter create test',email:'created-waiter-'+Date.now()+'@invalid.test',role:'WAITER',password:'local-test-password-only'}));assert.equal(response.status,200);assert.equal((await response.json()).user.role,'WAITER');
+   const response=await createUser(req('/api/users',await token(manager),'POST',{name:'Waiter create test',email:'created-waiter-'+Date.now()+'@invalid.test',role:'WAITER',password:'local-test-password-only'}));assert.equal(response.status,200);assert.equal((await response.json()).user.role,'WAITER');
  });
  await test('Efficient revision performs exactly one database call including current authority',async()=>{
    const original=prisma.$queryRaw;let calls=0;
@@ -140,7 +141,7 @@ async function main() {
  });
  await test('Efficient revision rejects disabled user, stale claimed role and expired trial immediately',async()=>{
    await prisma.user.update({where:{id:owner.id},data:{isActive:false}});assert.equal((await live(req('/api/live/orders'))).status,401);await prisma.user.update({where:{id:owner.id},data:{isActive:true,role:'INVENTORY_MANAGER'}});
-   assert.equal((await live(req('/api/live/orders'))).status,403);await prisma.user.update({where:{id:owner.id},data:{role:'OWNER'}});
+   assert.equal((await live(req('/api/live/orders'))).status,401);await prisma.user.update({where:{id:owner.id},data:{role:'OWNER'}});
    const sub=await prisma.subscription.findUnique({where:{restaurantId:restaurant.id}});
    await prisma.subscription.update({where:{restaurantId:restaurant.id},data:{status:'TRIALING',currentPeriodEnd:new Date(0)}});
    assert.equal((await live(req('/api/live/orders'))).status,402);
