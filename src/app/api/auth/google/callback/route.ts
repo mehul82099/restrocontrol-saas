@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     });
     if (!tokenRes.ok) return fail('google_failed');
     const tokens = await tokenRes.json();
-    const identity = typeof tokens.id_token === 'string' ? readIdToken(tokens.id_token, cfg.clientId, nonce) : null;
+    const identity = typeof tokens.id_token === 'string' ? await readIdToken(tokens.id_token, cfg.clientId, nonce) : null;
     if (!identity || !identity.emailVerified) return fail('google_failed');
 
     if (mode === 'invite') {
