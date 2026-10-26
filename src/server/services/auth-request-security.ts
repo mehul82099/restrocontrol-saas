@@ -84,4 +84,4 @@ export function protectAuthRequest(handler: (req: NextRequest) => Promise<NextRe
       return reject(503, 'Authentication is temporarily unavailable. Try again shortly.');
     }
   };
-                                         }
+}
