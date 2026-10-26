@@ -1,3 +1,5 @@
+import { protectAuthRequest } from '@/server/services/auth-request-security';
+import { invalidateUserSessions } from '@/server/services/auth.service';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/server/db/prisma';
@@ -5,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { AuditService } from '@/server/services/audit.service';
 import { validateNewPassword } from '@/server/services/password-policy';
 
-export async function POST(req: NextRequest) {
+async function resetPassword(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
     const token = typeof body?.token === 'string' ? body.token : '';
@@ -23,10 +25,17 @@ export async function POST(req: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: record.userId }, data: { passwordHash } }),
-      prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
-    ]);
+    await prisma.$transaction(async tx => {
+      // User lock order is shared with issuance and credential changes.
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${record.userId} AND "restaurantId" = ${record.user.restaurantId} FOR UPDATE`;
+      const now = new Date();
+      const claim = await tx.passwordResetToken.updateMany({where: {id: record.id, userId: record.userId,
+        tokenHash, usedAt: null, expiresAt: {gt: now}, user: {isActive: true}}, data: {usedAt: now}});
+      if (claim.count !== 1) throw new Error('Reset link already consumed');
+      await tx.user.update({where: {id: record.userId}, data: {passwordHash, authVersion: {increment: 1}}});
+      await tx.passwordResetToken.updateMany({where: {userId: record.userId, usedAt: null}, data: {usedAt: now}});
+      await invalidateUserSessions(tx, record.userId, record.user.restaurantId, now);
+    });
 
     await AuditService.log({
       restaurantId: record.user.restaurantId,
@@ -42,4 +51,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = protectAuthRequest(resetPassword, {scope: 'reset-password', ipLimit: 100, identityLimit: 10});
 export const dynamic = 'force-dynamic';
