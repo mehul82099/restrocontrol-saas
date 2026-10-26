@@ -65,7 +65,22 @@ Optional production ZAP scan omitted: no production probing is needed for this r
 
 ## Fix log
 
-Audit completed before implementation. Small behavior-preserving changes and their verification/commit IDs will be appended here. No claim that the app is completely secure or every flow is identical follows from passing tests.
+Audit written before implementation (`0e7319f`). No claim that the app is completely secure or every flow is identical follows from passing tests.
+
+| Change | Remote commit(s) | Verification |
+| --- | --- | --- |
+| Disable Git deployment for this branch only | `be55d3c` (first remote write) | Official Vercel config contract checked; native GitHub read and fetched bytes match. Main and other branches unchanged. |
+| Next 15.5.27 -> 15.5.28; Nodemailer 10.1.1 -> 10.1.4 | `592b629`, `d1a3b11` | Each patch separately passed local suites/build/start/render before publication. Lockfile retains baseline compact formatting. Only these packages and Next bundled platform packages changed. Full npm audit: 0 vulnerabilities. |
+| Separate report-only resource CSP | `6fa3ffc` | Existing enforcing CSP byte-for-byte unchanged. Local Chromium securitypolicyviolation events, disposition=report: inline script-src-elem on login (8), signup (8), landing (22). Do not enforce this candidate policy without nonce/hash work and broader flow testing. No report endpoint or production telemetry was added. |
+| Weekly npm/actions Dependabot | `1b9303a`, path correction `db39806` | Config byte-compared at .github/dependabot.yml. It takes effect on default branch only after an independently approved merge. |
+| Redacted full-history Gitleaks on push/PR | `24a5453`, `8ed7acf`, path correction `6fa0922` | Gitleaks 8.30.1 passes locally with exact fingerprint exceptions only for reviewed synthetic variable expressions and non-secret Razorpay plan IDs. No path-wide secret suppression. Historical weak signing material still requires rotation verification, regardless of scanner status. |
+| PR Semgrep, five requested packs | `d652f5e`, path correction `49a624e` | Same local scan: 0 findings, 17 partial-parser warnings, about 99.8% parsed. Warnings remain visible; no unrelated JSX refactor. Metrics disabled, no Semgrep account/token. |
+
+Final isolated fresh-fixture gate: npm test, test:security, test:auth, test:invites, build and server start/render all PASS. Login, signup and landing screenshots inspected. Repeated suites on accumulated synthetic inventory briefly exposed an existing strict floating-point assertion mismatch; reverting the CI-only step did not remove it. Resetting only the isolated test DB to clean fixtures restored the gate. No test or application source was changed to mask it.
+
+No route, API body, session policy, database schema or UI source changed. Live Google, SMTP, browser-push, payment, production CSP traffic and every authenticated UI screen remain unverified. Passing available checks is not proof of exact behavior in those flows.
+
+PR: https://github.com/mehul82099/restrocontrol-saas/pull/22 (draft, unmerged).
 
 ## Sources
 
