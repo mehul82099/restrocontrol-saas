@@ -19,17 +19,17 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   }
   const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies.get('token')?.value;
   const payload = token ? verifyToken(token) : null;
-  if (!payload?.userId || !payload.restaurantId) return reject(401, 'Invalid or expired authentication.');
-  if (payload.attendanceSessionId) {
-    const session = await prisma.attendanceSession.findFirst({where: {
-      id: payload.attendanceSessionId, userId: payload.userId, restaurantId: payload.restaurantId,
-      checkedOutAt: null, expiresAt: {gt: new Date()},
-    }});
-    if (!session) return reject(401, 'This login session has ended.');
-  }
-  // Reload authority on every request: disabled users and role changes take effect immediately.
-  const user = await prisma.user.findFirst({where: {id: payload.userId, restaurantId: payload.restaurantId, isActive: true}, include: {userOutlets: true}});
-  if (!user) return reject(401, 'Invalid or expired authentication.');
+  if (!payload?.userId || !payload.restaurantId || !payload.authSessionId) return reject(401, 'Invalid or expired authentication.');
+  const now = new Date();
+  // One current-user read carries session and attendance authority. IDs alone never
+  // select another tenant's capability. No legacy token compatibility bypass.
+  const user = await prisma.user.findFirst({where: {id: payload.userId, restaurantId: payload.restaurantId, isActive: true}, include: {
+    userOutlets: true,
+    authSessions: {where: {id: payload.authSessionId, userId: payload.userId, restaurantId: payload.restaurantId, revokedAt: null, expiresAt: {gt: now}}},
+    ...(payload.attendanceSessionId ? {attendanceSessions: {where: {id: payload.attendanceSessionId, userId: payload.userId, restaurantId: payload.restaurantId, checkedOutAt: null, expiresAt: {gt: now}}}} : {}),
+  }});
+  if (!user || !user.authSessions.some(s => s.authVersion === user.authVersion)) return reject(401, 'This login session has ended.');
+  if ((user.role !== 'OWNER' || payload.attendanceSessionId) && !('attendanceSessions' in user && Array.isArray(user.attendanceSessions) && user.attendanceSessions.length)) return reject(401, 'This login session has ended.');
   // Free-trial expiry: only TRIALING subscriptions are blocked. Other accounts are unaffected.
   const subscription = await prisma.subscription.findUnique({where: {restaurantId: user.restaurantId}, select: {status: true, currentPeriodEnd: true}});
   if (getTrialInfo(subscription).expired && !isTrialExemptPath(new URL(req.url).pathname, req.method)) {
@@ -41,5 +41,5 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   const requested = req.headers.get('x-outlet-id') || new URL(req.url).searchParams.get('outletId');
   const outlet = requested ? outlets.find(o => o.id === requested) : outlets.find(o => o.id === payload.outletId) || outlets[0];
   if (!outlet) return reject(403, 'Outlet unavailable or not assigned to this user.');
-  return {auth: {user: {userId: user.id, restaurantId: user.restaurantId, role: user.role, email: user.email, name: user.name, outletId: outlet.id}, restaurantId: user.restaurantId, outletId: outlet.id}};
+  return {auth: {user: {userId: user.id, restaurantId: user.restaurantId, role: user.role, email: user.email, name: user.name, outletId: outlet.id, authSessionId: payload.authSessionId, attendanceSessionId: payload.attendanceSessionId}, restaurantId: user.restaurantId, outletId: outlet.id}};
 }
