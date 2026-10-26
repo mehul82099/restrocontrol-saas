@@ -1,3 +1,5 @@
+import { safeRoute } from '@/server/services/safe-route';
+import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
@@ -6,7 +8,7 @@ import { SubscriptionService } from '@/server/services/subscription.service';
 import { INVITE_TTL_MS, hashToken, newToken, isInviteRole, inviteState } from '@/server/services/invite.service';
 
 // Owner and Manager (manage:users) only. The raw link is returned once, at creation.
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
   const rows = await prisma.staffInvite.findMany({
@@ -17,13 +19,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ success: true, invites: rows.map((r) => ({ ...r, state: inviteState(r) })) });
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const origin = req.headers.get('origin');
   if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
   if (auth.user.role !== 'OWNER' && auth.user.role !== 'MANAGER') return NextResponse.json({ success: false, error: 'Permission denied.' }, { status: 403 });
-  const body = await req.json().catch(() => ({}));
+  const body = JSON.parse(await readBoundedText(req));
   if (!isInviteRole(body.role)) return NextResponse.json({ success: false, error: 'Choose cashier, kitchen or waiter.' }, { status: 400 });
   const label = typeof body.label === 'string' ? body.label.trim().slice(0, 80) || null : null;
   const check = await SubscriptionService.canPerformAction(auth.restaurantId, 'ADD_USER');
@@ -36,3 +38,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true, invite: { id: invite.id, role: invite.role, label, expiresAt: invite.expiresAt }, link: `${new URL(req.url).origin}/join/${token}` }, { status: 201 });
 }
 export const dynamic = 'force-dynamic';
+
+export const GET = safeRoute(handleGET);
+export const POST = safeRoute(handlePOST);
