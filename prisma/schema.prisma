@@ -186,6 +186,7 @@ model User {
   restaurantId String
   email        String
   passwordHash String
+  authVersion  Int      @default(0)
   name         String
   role         UserRole @default(CASHIER)
   phone        String?
@@ -201,6 +202,7 @@ model User {
   invitesCreated StaffInvite[] @relation("InviteCreator")
   inviteUsed StaffInvite? @relation("InviteUsedBy")
   passwordResetTokens PasswordResetToken[]
+  authSessions AuthSession[]
 
   @@unique([restaurantId, email])
   @@index([restaurantId, role])
@@ -948,4 +950,26 @@ model LiveBillingEvent {
   providerId String
   eventType  String
   receivedAt DateTime @default(now())
+}
+
+// Shared, bounded authentication abuse budgets. Keys contain hashes, not raw IP/email.
+model SecurityRateLimit {
+  key       String   @id
+  hits      Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+// Revocable login capability for every role. Legacy JWTs without a row are rejected.
+model AuthSession {
+  id String @id @default(uuid())
+  userId String
+  restaurantId String
+  authVersion Int
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, restaurantId, expiresAt])
 }
