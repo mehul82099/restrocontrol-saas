@@ -16,7 +16,11 @@
     "test:reliability": "node tests/reliability-regression.js",
     "test:auth": "node tests/auth-google-demo.js",
     "test:live-orders": "node tests/live-orders-regression.js",
-    "test:invites": "node tests/staff-invite-regression.js"
+    "test:invites": "node tests/staff-invite-regression.js",
+    "test:google-signatures": "node tests/google-id-token-verification.js",
+    "test:auth-requests": "node tests/auth-request-security-regression.js",
+    "test:sessions": "node tests/auth-session-regression.js",
+    "test:attendance": "node tests/attendance-regression.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
