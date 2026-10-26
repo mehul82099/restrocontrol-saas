@@ -11,6 +11,33 @@ Date: 2026-10-26. Baseline: `f38a6231dc0762c35ad434d0ac99c93494b56620` (`main`).
 - Gitleaks 8.30.1: 362 reachable commits scanned; 25 candidates in synthetic invite fixtures and a release configuration example. Historical `.env` and known signing material also inspected manually. A clean generic scanner result would not prove rotation.
 - Semgrep 1.182.1, all five requested rule packs: zero findings, **17 partial-parser warnings** in existing TSX text containing ampersands. 187 targets scanned, approximately 99.8% parsed lines. This is limited coverage, not an all-clear.
 
+## Follow-up security fixes, 2026-10-26 22:20 IST
+
+The owner then requested remaining fixes before publication. This section supersedes the earlier "Needs owner decision" status only for the implemented code below. All-user one-time re-login was separately approved in the authenticated conversation. Production DB migration, credentials and final deployment remain gated; no production change has happened.
+
+The independently tested code tree is `f2fdd5021e1f9109657f00854300f6d02374a990`, published at `bab5bf8be8251e7852125725d888f19232089754` before this documentation-only update. Local concern commits were Google `6c1ba79`, sessions/reset/rate `8bb4b43`, body/error `7e2b3af`, and CI `fc378ef`; remote normal-editor commits split files, so the full tree, not an intermediate commit, is the release artifact.
+
+- AUTH-01/02/03: persisted, tenant/user-scoped AuthSession for every role; mandatory session identifier rejects legacy JWTs. Logout revokes the current device, password reset/change revokes all devices/attendance/push and consumes pending reset links. User-row serialization and expected password hash prevent an in-flight old-password login issuing a fresh session after reset. Reset claims are atomic: exactly one concurrent winner. Live revision retains one SQL query, now with session/version/attendance predicates. Owner demotion without a staff attendance session now returns 401 rather than 403 and needs re-login.
+- AUTH-04: fixed Google JWKS authority, RS256 signature verification, required issuer/audience/expiry/subject/nonce, bounded fetch/body, public-key cache and fail-closed rotation/outage handling. No new dependency. Unknown-key refresh cooldown can temporarily reject a legitimate new-key login; do not revert to decode-only verification. Real Google login remains unverified.
+- AUTH-05/RATE-01/02: same-origin login defense preserves no-Origin clients. Atomic PostgreSQL budgets work across instances, using HMAC keys, no raw email/IP/token storage, no new paid or Redis service. Forgot-password keeps its generic response even when denied. Missing limiter storage fails closed: other auth returns generic 503; forgot remains generic 200, not an email-delivery promise.
+- AUTH-06: new password creation/change/reset rejects UTF-8 inputs over bcrypt's 72-byte limit; existing password login acceptance was not tightened. Existing response keys and UI text are unchanged.
+- VAL-01/ERR-01: shared protected mutations and auth wrappers use a 64KiB streamed byte cap, not only Content-Length/full-body checks. Invite/refund route DB exceptions are generic; successful responses remain untouched. No blanket schema/refactor or claim every endpoint now has a route-specific Zod schema.
+- CI explicitly runs sessions, attendance, Google signatures, auth requests and invites in addition to existing tests/security/audit/build.
+
+### Rate policy proposed for final owner review
+
+Login, forgot and reset: 100/IP per 15 minutes, plus 10 per IP+email (or reset-token hash) per 15 minutes. Existing login also retains its 10 known-account attempts/15m. Forgot adds 10/email/15m globally to cap SMTP abuse; an attacker can temporarily exhaust that victim's budget, a deliberate tradeoff. Invite signup: 100/IP and 20/IP+email per 15 minutes. Restaurant signup retains the prior 5/IP/hour policy, now shared across instances, plus 5/IP+email/hour. Shared offices/cafes can hit signup limits. The platform's trusted x-vercel-forwarded-for is used on Vercel; missing/invalid addresses share an "unknown" bucket. Auth budgets add DB writes; no claimed free-tier monthly cap has been assumed. Explicit final policy approval is still required before production rollout.
+
+### Current verification and limits
+
+Fresh isolated fixtures: typecheck; npm test (including live31); security30; sessions12; attendance21; auth9; Google signature11; invites15; auth-request origin/budget/cap/failure tests; production build/start all PASS. Login/signup/landing remain pixel-identical to the original baseline. Independent combined implementation gate reproduced the same code tree. Full npm audit: 0. Redacted Gitleaks: 0 unexcepted findings. Five-pack Semgrep: 0 findings, existing partial TSX parser warnings persist (~99.8% parsed), not full coverage. Remote CI at the final head must be checked separately; queued intermediate runs are not final evidence.
+
+Synthetic baseline schema -> reviewed additive SQL -> final schema diff is empty. Correct-production encrypted backup/restore proof is still blocked on securely identifying the current app's database connection. A synthetic rehearsal is not a production backup restore. Required order: verified fresh encrypted backup + isolated restore/rehearsal; explicit production SQL OK; additive SQL and table/column checks; old app compatibility; only then merge (which deploys). SQL is in `prisma/security-migrations/auth-session-rate-additive.sql`, outside migration history because the repo uses db push and has no baseline. Do not run unreviewed production db push/migrate deploy.
+
+Historical JWT/NextAuth rotation or verified non-use remains unresolved. No current secret values read here, no credential rotation. No blanket secure claim. Real Google/SMTP/payment/push and all authenticated screens remain unverified. Keep CSP report-only. Prefer forward fixes: old-code rollback restores JWT-only acceptance and can reactivate revoked/legacy tokens for 12h; it is not security-safe without paused access or separately approved fresh-key rotation.
+
+Still owner policies: signing rotation, actual backup/migration/deploy gates, AuthSession/attendance retention (no silent deletion), POS shared-device pending-cart retention, tenant-composite constraints/data cleanup, branch protection, expensive-endpoint quotas/pagination and full route-schema validation. No optional refund transition refactor or production scan was added.
+
 ## Findings and planned treatment
 
 Line references below refer to the baseline unless marked historical. Severity describes the potential impact, not proof of production exploitation.
