@@ -1,10 +1,12 @@
+import { safeRoute } from '@/server/services/safe-route';
+import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 import { AuditService } from '@/server/services/audit.service';
 
 // Cancel (revoke) an unused invite of this restaurant.
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+async function handleDELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const origin = req.headers.get('origin');
   if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
@@ -17,3 +19,5 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   return NextResponse.json({ success: true });
 }
 export const dynamic = 'force-dynamic';
+
+export const DELETE = safeRoute(handleDELETE);
