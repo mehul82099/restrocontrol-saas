@@ -3,9 +3,10 @@ import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
 import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { AuditService } from '@/server/services/audit.service';
+import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { isDemoAccount } from '@/server/auth/demo';
 
-export async function POST(req: NextRequest) {
+async function login(req: NextRequest) {
   try {
     const { email, password } = await req.json();
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       email: user.email,
       name: user.name,
       outletId: defaultOutlet?.id,
-    });
+    }, user.passwordHash);
 
     await AuditService.log({
       restaurantId: user.restaurantId,
@@ -109,5 +110,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = protectAuthRequest(login, {scope: 'login', ipLimit: 100, identityLimit: 10});
 
 export const dynamic = 'force-dynamic';

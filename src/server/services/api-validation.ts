@@ -1,3 +1,4 @@
+import { readBoundedText, RequestBodyError } from './auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import { assertTenantReference } from './validation';
 import { prisma } from '../db/prisma';
@@ -9,7 +10,7 @@ export function protectMutation(handler: (req: NextRequest, ...args: any[]) => a
     try {
       const {auth, errorResponse} = await authenticateRequest(req);
       if (!auth) return errorResponse;
-      const text = await req.clone().text();
+      const text = await readBoundedText(req.clone());
       if (text.length > 65536) return NextResponse.json({success: false, error: 'Request too large.'}, {status: 413});
       const data = JSON.parse(text || '{}');
       if (!data || Array.isArray(data) || typeof data !== 'object') throw new Error('Invalid request');
@@ -50,7 +51,8 @@ export function protectMutation(handler: (req: NextRequest, ...args: any[]) => a
       const response = await handler(req, ...args);
       if (response && response.status >= 400) return NextResponse.json({success: false, error: response.status >= 500 ? 'Request failed.' : 'Request rejected. Check the input and permissions.'}, {status: response.status});
       return response;
-    } catch {
+    } catch (error) {
+      if (error instanceof RequestBodyError) return NextResponse.json({success: false, error: 'Request too large.'}, {status: 413});
       return NextResponse.json({success: false, error: 'Invalid request or operation could not be completed.'}, {status: 400});
     }
   };

@@ -7,8 +7,13 @@ const {isDemoEmail, isDemoAccount} = jiti('../src/server/auth/demo');
 const g = jiti('../src/server/auth/google');
 let n = 0;
 async function test(name, fn) { await fn(); n++; console.log('PASS ' + name); }
-const tok = p => 'h.' + Buffer.from(JSON.stringify(p)).toString('base64url') + '.s';
-const good = {aud: 'cid', iss: 'https://accounts.google.com', exp: Math.floor(Date.now() / 1000) + 600, nonce: 'n1', email: 'Owner@Shop.com', email_verified: true};
+const crypto = require('node:crypto');
+const jwt = require('jsonwebtoken');
+const {privateKey, publicKey} = crypto.generateKeyPairSync('rsa', {modulusLength: 2048});
+const jwk = {...publicKey.export({format: 'jwk'}), kid: 'demo-test-key', alg: 'RS256', use: 'sig'};
+const readIdToken = g.createGoogleIdTokenReader(async () => new Response(JSON.stringify({keys: [jwk]}), {headers: {'cache-control': 'max-age=3600'}}));
+const tok = p => jwt.sign(p, privateKey, {algorithm: 'RS256', keyid: jwk.kid, noTimestamp: true});
+const good = {sub: 'test-subject', aud: 'cid', iss: 'https://accounts.google.com', exp: Math.floor(Date.now() / 1000) + 600, nonce: 'n1', email: 'Owner@Shop.com', email_verified: true};
 (async () => {
   await test('demo emails and demo restaurant are detected', () => {
     for (const e of ['owner@demokitchen.com', 'MANAGER@DemoKitchen.com', 'inventory@demokitchen.com']) assert.ok(isDemoEmail(e));
@@ -16,19 +21,19 @@ const good = {aud: 'cid', iss: 'https://accounts.google.com', exp: Math.floor(Da
     assert.ok(isDemoAccount({email: 'x@y.com', restaurant: {slug: 'demo-kitchen'}}));
     assert.ok(!isDemoAccount({email: 'x@y.com', restaurant: {slug: 'real-1'}}));
   });
-  await test('valid id_token yields normalized verified identity', () => {
-    const id = g.readIdToken(tok(good), 'cid', 'n1');
+  await test('valid id_token yields normalized verified identity', async () => {
+    const id = await readIdToken(tok(good), 'cid', 'n1');
     assert.deepEqual([id.email, id.emailVerified], ['owner@shop.com', true]);
   });
-  await test('wrong audience, issuer, nonce, expiry or malformed token rejected', () => {
-    assert.equal(g.readIdToken(tok({...good, aud: 'other'}), 'cid', 'n1'), null);
-    assert.equal(g.readIdToken(tok({...good, iss: 'https://evil.example'}), 'cid', 'n1'), null);
-    assert.equal(g.readIdToken(tok(good), 'cid', 'n2'), null);
-    assert.equal(g.readIdToken(tok({...good, exp: 1}), 'cid', 'n1'), null);
-    assert.equal(g.readIdToken('nonsense', 'cid', 'n1'), null);
+  await test('wrong audience, issuer, nonce, expiry or malformed token rejected', async () => {
+    assert.equal(await readIdToken(tok({...good, aud: 'other'}), 'cid', 'n1'), null);
+    assert.equal(await readIdToken(tok({...good, iss: 'https://evil.example'}), 'cid', 'n1'), null);
+    assert.equal(await readIdToken(tok(good), 'cid', 'n2'), null);
+    assert.equal(await readIdToken(tok({...good, exp: 1}), 'cid', 'n1'), null);
+    assert.equal(await readIdToken('nonsense', 'cid', 'n1'), null);
   });
-  await test('unverified email is flagged', () => {
-    assert.equal(g.readIdToken(tok({...good, email_verified: false}), 'cid', 'n1').emailVerified, false);
+  await test('unverified email is flagged', async () => {
+    assert.equal((await readIdToken(tok({...good, email_verified: false}), 'cid', 'n1')).emailVerified, false);
   });
   await test('google disabled without credentials; start redirects to login error', async () => {
     delete process.env.GOOGLE_CLIENT_ID; delete process.env.GOOGLE_CLIENT_SECRET;
@@ -58,7 +63,7 @@ const good = {aud: 'cid', iss: 'https://accounts.google.com', exp: Math.floor(Da
     const page = read('src/app/(auth)/login/page.tsx');
     assert.ok(!/password123|owner@demokitchen|Demo Logins/i.test(page));
   });
-  await test('purpose token: google_signup only, tamper/expiry/other purpose rejected', () => {
+  await test('purpose token: google_signup only, tamper/expiry/other purpose rejected', async () => {
     process.env.JWT_SECRET = 'x'.repeat(8) + 'unit-test-signing-key-0123456789abcdef';
     const j = jiti('../src/server/auth/jwt');
     const t = j.signPurposeToken('google_signup', {email: 'a@b.com', name: 'A'});

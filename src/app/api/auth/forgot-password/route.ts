@@ -1,3 +1,4 @@
+import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/server/db/prisma';
@@ -7,7 +8,7 @@ import { isDemoAccount } from '@/server/auth/demo';
 // Always answers the same way so the endpoint cannot reveal whether an email has an account.
 const GENERIC = { success: true, message: 'If this email has an account, a reset link is on its way.' };
 
-export async function POST(req: NextRequest) {
+async function forgotPassword(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
     const email = typeof body?.email === 'string' ? body.email.toLowerCase().trim() : '';
@@ -35,4 +36,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export const POST = protectAuthRequest(forgotPassword, {scope: 'forgot-password', ipLimit: 100, identityLimit: 10, accountLimit: 10, generic: GENERIC});
 export const dynamic = 'force-dynamic';

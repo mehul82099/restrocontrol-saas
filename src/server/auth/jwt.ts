@@ -9,6 +9,7 @@ export interface AuthUserPayload {
   name: string;
   outletId?: string;
   attendanceSessionId?: string;
+  authSessionId?: string;
 }
 
 function signingKey(): string {
@@ -25,7 +26,13 @@ export function signToken(payload: AuthUserPayload): string {
 
 export function verifyToken(token: string): AuthUserPayload | null {
   try {
-    return jwt.verify(token, signingKey(), { algorithms: ['HS256'] }) as AuthUserPayload;
+    const p = jwt.verify(token, signingKey(), { algorithms: ['HS256'] }) as any;
+    if (!p || p.purpose || typeof p.userId !== 'string' || !p.userId ||
+      typeof p.restaurantId !== 'string' || !p.restaurantId ||
+      !['OWNER','MANAGER','CASHIER','KITCHEN_STAFF','WAITER','INVENTORY_MANAGER'].includes(p.role) ||
+      (p.authSessionId !== undefined && typeof p.authSessionId !== 'string') ||
+      (p.attendanceSessionId !== undefined && typeof p.attendanceSessionId !== 'string')) return null;
+    return p as AuthUserPayload;
   } catch {
     return null;
   }

@@ -1,0 +1,26 @@
+# Reviewed synthetic invite variables and non-secret provider plan IDs only.
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:25
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:55
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:68
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:76
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:81
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:88
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:91
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:107
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:108
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:117
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:121
+ae0d0fa7a1f82d39f7913ff8d62c61778af9c198:tests/staff-invite-regression.js:generic-api-key:127
+0cc8a86824bcda1a21f8383ceb24d7e757766e07:RELEASE_PLAN_OCT16.md:generic-api-key:40
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:25
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:55
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:68
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:76
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:81
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:88
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:91
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:107
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:108
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:117
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:121
+baea5658d31242b89561cd09606fc6c57007c01c:tests/staff-invite-regression.js:generic-api-key:127
