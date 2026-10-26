@@ -36,6 +36,12 @@ jobs:
       - run: npm run prisma:seed
       - run: npm run typecheck
       - run: npm test
+      - run: npm run test:sessions
+      - run: npm run test:attendance
+      - run: npm run test:auth
+      - run: npm run test:google-signatures
+      - run: npm run test:auth-requests
+      - run: npm run test:invites
       - run: npm run test:security
       - run: npm audit --omit=dev --audit-level=moderate
       - run: npm run build
