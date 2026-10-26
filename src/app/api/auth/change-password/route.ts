@@ -1,3 +1,4 @@
+import { invalidateUserSessions } from '@/server/services/auth.service';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
@@ -26,7 +27,14 @@ export async function POST(req: NextRequest) {
     if (!ok) return NextResponse.json({ success: false, error: 'Current password is incorrect.' }, { status: 401 });
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await prisma.$transaction(async tx => {
+      const changed = await tx.user.updateMany({where: {id: user.id, restaurantId: user.restaurantId,
+        isActive: true, passwordHash: user.passwordHash}, data: {passwordHash, authVersion: {increment: 1}}});
+      if (changed.count !== 1) throw new Error('Password changed concurrently');
+      const now = new Date();
+      await tx.passwordResetToken.updateMany({where: {userId: user.id, usedAt: null}, data: {usedAt: now}});
+      await invalidateUserSessions(tx, user.id, user.restaurantId, now);
+    });
 
     await AuditService.log({
       restaurantId: user.restaurantId,
