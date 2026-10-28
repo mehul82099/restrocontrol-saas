@@ -8,7 +8,7 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [live, setLive] = useState<boolean | null>(null);
-  useEffect(() => { fetch('/api/billing/live/status').then(r => r.json()).then(d => setLive(d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setLive(null)); }, []);
+  useEffect(() => { fetch('/api/billing/live/status').then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => setLive(!ok || d?.success !== true ? null : d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setLive(null)); }, []);
   async function pay(planCode: string) {
     const plan = SUBSCRIPTION_PLANS.find(p => p.code === planCode); if (!plan) return;
     if (!confirm('You will pay ' + formatINR(planBreakup(plan).totalPaise) + ' now (including 18% GST) and then every month automatically until you cancel. Continue?')) return;
