@@ -7,8 +7,8 @@ import { GST_RATE_LABEL, formatINR } from '@/lib/gst';
 export default function PlanCards({ canRequest = false, currentCode, account = false }: { canRequest?: boolean; currentCode?: string; account?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const [live, setLive] = useState(false);
-  useEffect(() => { fetch('/api/billing/live/status').then(r => r.json()).then(d => setLive(d?.enabled === true)).catch(() => setLive(false)); }, []);
+  const [live, setLive] = useState<boolean | null>(null);
+  useEffect(() => { fetch('/api/billing/live/status').then(r => r.json()).then(d => setLive(d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setLive(null)); }, []);
   async function pay(planCode: string) {
     const plan = SUBSCRIPTION_PLANS.find(p => p.code === planCode); if (!plan) return;
     if (!confirm('You will pay ' + formatINR(planBreakup(plan).totalPaise) + ' now (including 18% GST) and then every month automatically until you cancel. Continue?')) return;
@@ -33,7 +33,7 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
     finally { setBusy(null); }
   }
   return <div className="mt-7">
-    <div className="mb-5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-700">Prices are per month and carry 18% GST on top; each card shows the GST-inclusive monthly total. Both website plans include unlimited staff and orders. {live ? 'Pay online with UPI or card; renewal is automatic every month (autopay through Razorpay) until you cancel. ' : 'Online autopay is not connected yet; activation is handled after signup. '}Upcoming plans cannot be selected.</div>
+    <div className="mb-5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-700">Prices are per month and carry 18% GST on top; each card shows the GST-inclusive monthly total. Both website plans include unlimited staff and orders. {live === true ? 'Pay online with UPI or card; renewal is automatic every month (autopay through Razorpay) until you cancel. ' : live === false ? 'Online autopay is not connected yet; activation is handled after signup. ' : ''}Upcoming plans cannot be selected.</div>
     <div className="grid gap-4 sm:grid-cols-2">
       {SUBSCRIPTION_PLANS.map(plan => <section key={plan.code} className={`flex min-w-0 flex-col rounded-2xl border bg-white p-5 ${plan.upcoming ? 'border-stone-200' : 'border-emerald-300'}`}>
         <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold ${plan.upcoming ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-800'}`}>{plan.upcoming ? 'Upcoming' : 'Website plan'}</span>
