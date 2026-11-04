@@ -1,3 +1,4 @@
+// Access: Current DB session required; access:waiter. Tenant/outlet scope from authenticated context.
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
