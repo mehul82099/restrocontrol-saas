@@ -6,6 +6,7 @@ import { prisma } from '@/server/db/prisma';
 import { AuditService } from '@/server/services/audit.service';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { INVITE_TTL_MS, hashToken, newToken, isInviteRole, inviteState } from '@/server/services/invite.service';
+import { publicOrigin } from '@/server/public-origin';
 
 // Owner and Manager (manage:users) only. The raw link is returned once, at creation.
 async function handleGET(req: NextRequest) {
@@ -21,7 +22,7 @@ async function handleGET(req: NextRequest) {
 
 async function handlePOST(req: NextRequest) {
   const origin = req.headers.get('origin');
-  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
+  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
   if (auth.user.role !== 'OWNER' && auth.user.role !== 'MANAGER') return NextResponse.json({ success: false, error: 'Permission denied.' }, { status: 403 });
@@ -35,7 +36,7 @@ async function handlePOST(req: NextRequest) {
   const token = newToken();
   const invite = await prisma.staffInvite.create({ data: { restaurantId: auth.restaurantId, tokenHash: hashToken(token), role: body.role, label, createdById: auth.user.userId, expiresAt: new Date(Date.now() + INVITE_TTL_MS) } });
   await AuditService.log({ restaurantId: auth.restaurantId, userId: auth.user.userId, action: 'STAFF_INVITE_CREATE', entity: 'StaffInvite', entityId: invite.id, after: { role: invite.role, label, expiresAt: invite.expiresAt } });
-  return NextResponse.json({ success: true, invite: { id: invite.id, role: invite.role, label, expiresAt: invite.expiresAt }, link: `${new URL(req.url).origin}/join/${token}` }, { status: 201 });
+  return NextResponse.json({ success: true, invite: { id: invite.id, role: invite.role, label, expiresAt: invite.expiresAt }, link: `${publicOrigin(req)}/join/${token}` }, { status: 201 });
 }
 export const dynamic = 'force-dynamic';
 

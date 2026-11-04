@@ -6,9 +6,10 @@ import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { redeemInvite, InviteError, landingFor, INVITE_COOKIE } from '@/server/services/invite.service';
 import { isDemoAccount, isDemoEmail } from '@/server/auth/demo';
 import { googleConfig, redirectUri, readIdToken, safeEqual, GOOGLE_STATE_COOKIE, GOOGLE_SIGNUP_COOKIE, GOOGLE_SIGNUP_PURPOSE } from '@/server/auth/google';
+import { publicOrigin } from '@/server/public-origin';
 
 export async function GET(req: NextRequest) {
-  const origin = new URL(req.url).origin;
+  const origin = publicOrigin(req);
   const fail = (code: string) => {
     const r = NextResponse.redirect(`${origin}/login?error=${code}`);
     r.cookies.set(GOOGLE_STATE_COOKIE, '', { path: '/api/auth/google', maxAge: 0 });

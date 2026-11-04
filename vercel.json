@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "security-hardening": false
+      "security-hardening": false,
+      "fix/public-origin-behind-proxy": false
     }
   }
 }

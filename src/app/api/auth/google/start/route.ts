@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { INVITE_COOKIE, validTokenShape } from '@/server/services/invite.service';
 import { googleConfig, redirectUri, randomToken, GOOGLE_STATE_COOKIE } from '@/server/auth/google';
+import { publicOrigin } from '@/server/public-origin';
 
 export async function GET(req: NextRequest) {
-  const origin = new URL(req.url).origin;
+  const origin = publicOrigin(req);
   const cfg = googleConfig();
   if (!cfg) return NextResponse.redirect(`${origin}/login?error=google_unavailable`);
   const sp = new URL(req.url).searchParams;

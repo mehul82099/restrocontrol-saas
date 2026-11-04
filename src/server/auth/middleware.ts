@@ -3,6 +3,7 @@ import { verifyToken, AuthUserPayload } from './jwt';
 import { hasPermission, Permission } from './permissions';
 import { prisma } from '../db/prisma';
 import { getTrialInfo, isTrialExemptPath } from '../services/trial.service';
+import { publicOrigin } from '@/server/public-origin';
 
 export interface AuthenticatedContext {
   user: AuthUserPayload;
@@ -15,7 +16,7 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   const header = req.headers.get('authorization');
   if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !header?.startsWith('Bearer ')) {
     const origin = req.headers.get('origin');
-    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return reject(403, 'Cross-origin request denied.');
+    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) return reject(403, 'Cross-origin request denied.');
   }
   const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies.get('token')?.value;
   const payload = token ? verifyToken(token) : null;

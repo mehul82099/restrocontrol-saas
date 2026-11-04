@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { redeemInvite, InviteError, landingFor } from '@/server/services/invite.service';
+import { publicOrigin } from '@/server/public-origin';
 
 // Email + password sign-up through a staff invite link. Never creates a restaurant.
 async function registerInvite(req: NextRequest) {
   try {
     const origin = req.headers.get('origin');
-    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
+    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
     const ip = (req.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
     const b = await req.json();
     const password = typeof b.password === 'string' ? b.password : '';

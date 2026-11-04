@@ -4,11 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
 import { AuditService } from '@/server/services/audit.service';
+import { publicOrigin } from '@/server/public-origin';
 
 // Cancel (revoke) an unused invite of this restaurant.
 async function handleDELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const origin = req.headers.get('origin');
-  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
+  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
   const { auth, errorResponse } = await authenticateRequest(req, 'manage:users');
   if (errorResponse || !auth) return errorResponse;
   if (auth.user.role !== 'OWNER' && auth.user.role !== 'MANAGER') return NextResponse.json({ success: false, error: 'Permission denied.' }, { status: 403 });

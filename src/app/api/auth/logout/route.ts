@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sessionHash } from '@/server/services/push-policy';
 import { verifyToken } from '@/server/auth/jwt';
 import { prisma } from '@/server/db/prisma';
+import { publicOrigin } from '@/server/public-origin';
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get('origin');
-  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) {
+  if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) {
     return NextResponse.json({success: false, error: 'Cross-origin request denied.'}, {status: 403});
   }
   const bearer = req.headers.get('authorization');

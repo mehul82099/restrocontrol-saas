@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash, createHmac } from 'crypto';
 import { isIP } from 'net';
 import { prisma } from '../db/prisma';
+import { publicOrigin } from '@/server/public-origin';
 
 export class RequestBodyError extends Error {
   constructor(public status: number) { super('Invalid request body'); }
@@ -59,7 +60,7 @@ export function protectAuthRequest(handler: (req: NextRequest) => Promise<NextRe
       : NextResponse.json({success: false, error}, {status});
     try {
       const origin = req.headers.get('origin');
-      if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) return reject(403, 'Cross-origin request denied.');
+      if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) return reject(403, 'Cross-origin request denied.');
       // On Vercel the platform sets x-vercel-forwarded-for, rather than trusting a client-supplied XFF.
       const raw = process.env.VERCEL === '1' ? req.headers.get('x-vercel-forwarded-for') : req.headers.get('x-forwarded-for');
       const candidate = (raw || '').split(',')[0].trim();
