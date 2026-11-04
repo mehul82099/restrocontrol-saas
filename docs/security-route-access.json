@@ -1,15 +1,15 @@
 [
   {
     "route": "/api/analytics/dashboard",
-    "policy": "Current DB session required; view:analytics. Tenant/outlet scope from authenticated context."
+    "policy": "view:analytics [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/analytics/food-cost",
-    "policy": "Current DB session required; view:food_cost. Tenant/outlet scope from authenticated context."
+    "policy": "view:food_cost [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/analytics/variance",
-    "policy": "Current DB session required; view:variance. Tenant/outlet scope from authenticated context."
+    "policy": "view:variance [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/attendance",
@@ -17,11 +17,11 @@
   },
   {
     "route": "/api/audit-logs",
-    "policy": "Current DB session required; view:audit_logs. Tenant/outlet scope from authenticated context."
+    "policy": "view:audit_logs [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/auth/change-password",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/auth/forgot-password",
@@ -57,7 +57,7 @@
   },
   {
     "route": "/api/auth/me",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/auth/providers",
@@ -97,7 +97,7 @@
   },
   {
     "route": "/api/categories",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:menu. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:menu [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/csp-report",
@@ -105,31 +105,31 @@
   },
   {
     "route": "/api/customers",
-    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/ingredients",
-    "policy": "Current DB session required; view:inventory, manage:ingredients. Tenant/outlet scope from authenticated context."
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]; manage:ingredients [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/inventory/ledger",
-    "policy": "Current DB session required; view:inventory. Tenant/outlet scope from authenticated context."
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/inventory/low-stock",
-    "policy": "Current DB session required; view:inventory. Tenant/outlet scope from authenticated context."
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/inventory",
-    "policy": "Current DB session required; view:inventory, manage:inventory. Tenant/outlet scope from authenticated context."
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]; manage:inventory [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/kot/[id]/status",
-    "policy": "Current DB session required; update:kot_status. Tenant/outlet scope from authenticated context."
+    "policy": "update:kot_status [OWNER, MANAGER, KITCHEN_STAFF]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/kot",
-    "policy": "Current DB session required; access:kot. Tenant/outlet scope from authenticated context."
+    "policy": "access:kot [OWNER, MANAGER, KITCHEN_STAFF]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/live/orders",
@@ -137,7 +137,7 @@
   },
   {
     "route": "/api/menu",
-    "policy": "Current DB session required; access:pos, manage:menu. Tenant/outlet scope from authenticated context."
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]; manage:menu [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/notifications",
@@ -145,43 +145,43 @@
   },
   {
     "route": "/api/orders/[id]/cancel",
-    "policy": "Current DB session required; cancel:order. Tenant/outlet scope from authenticated context."
+    "policy": "cancel:order [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/orders/[id]/refund",
-    "policy": "Current DB session required; refund:order. Tenant/outlet scope from authenticated context."
+    "policy": "refund:order [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/orders",
-    "policy": "Current DB session required; manage:orders. Tenant/outlet scope from authenticated context."
+    "policy": "manage:orders [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/outlets",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:outlets. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:outlets [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/plans/request",
-    "policy": "Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context."
+    "policy": "manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/pos/catalog",
-    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/pos/checkout",
-    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/purchases/orders",
-    "policy": "Current DB session required; manage:purchases. Tenant/outlet scope from authenticated context."
+    "policy": "manage:purchases [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/purchases/receive",
-    "policy": "Current DB session required; manage:purchases. Tenant/outlet scope from authenticated context."
+    "policy": "manage:purchases [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/purchases/suppliers",
-    "policy": "Current DB session required; manage:suppliers. Tenant/outlet scope from authenticated context."
+    "policy": "manage:suppliers [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/push/config",
@@ -197,7 +197,7 @@
   },
   {
     "route": "/api/recipes",
-    "policy": "Current DB session required; manage:recipes. Tenant/outlet scope from authenticated context."
+    "policy": "manage:recipes [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/refunds/admin",
@@ -205,58 +205,58 @@
   },
   {
     "route": "/api/refunds",
-    "policy": "Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context."
+    "policy": "manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/reports",
-    "policy": "Current DB session required; view:reports. Tenant/outlet scope from authenticated context."
+    "policy": "view:reports [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/restaurant",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:restaurant. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:restaurant [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/staff-invites/[id]",
-    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/staff-invites",
-    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/stock-count/[id]/approve",
-    "policy": "Current DB session required; approve:stock_count. Tenant/outlet scope from authenticated context."
+    "policy": "approve:stock_count [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/stock-count",
-    "policy": "Current DB session required; manage:stock_count. Tenant/outlet scope from authenticated context."
+    "policy": "manage:stock_count [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/subscriptions",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:subscription. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/tables",
-    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:restaurant. Tenant/outlet scope from authenticated context."
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:restaurant [OWNER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/users",
-    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/waiter/catalog",
-    "policy": "Current DB session required; access:waiter. Tenant/outlet scope from authenticated context."
+    "policy": "access:waiter [OWNER, WAITER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/waiter/orders",
-    "policy": "Current DB session required; access:waiter. Tenant/outlet scope from authenticated context."
+    "policy": "access:waiter [OWNER, WAITER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/wastage/[id]/approve",
-    "policy": "Current DB session required; approve:wastage. Tenant/outlet scope from authenticated context."
+    "policy": "approve:wastage [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
   },
   {
     "route": "/api/wastage",
-    "policy": "Current DB session required; manage:wastage. Tenant/outlet scope from authenticated context."
+    "policy": "manage:wastage [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
   }
 ]
