@@ -1,3 +1,4 @@
+// Access: POST order-facing roles with live cookie session; DELETE any current authenticated role, own session only.
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/server/auth/jwt';
 import { authenticateRequest } from '@/server/auth/middleware';
