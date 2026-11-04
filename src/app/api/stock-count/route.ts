@@ -1,3 +1,4 @@
+// Access: Current DB session required; manage:stock_count. Tenant/outlet scope from authenticated context.
 import { protectRead } from '@/server/services/api-validation';
 import { hasPermission } from '@/server/auth/permissions';
 import { protectMutation } from '@/server/services/api-validation';
