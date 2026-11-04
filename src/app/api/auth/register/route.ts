@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { SubscriptionService } from '@/server/services/subscription.service';
 import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { trialEndDate, TRIAL_DAYS } from '@/server/services/trial.service';
+import { publicOrigin } from '@/server/public-origin';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_SIGNUPS_PER_HOUR = 30; // global brake against scripted abuse
@@ -20,7 +21,7 @@ function slugify(name: string): string {
 async function register(req: NextRequest) {
   try {
     const origin = req.headers.get('origin');
-    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== new URL(req.url).origin)) {
+    if (req.headers.get('sec-fetch-site') === 'cross-site' || (origin && origin !== publicOrigin(req))) {
       return NextResponse.json({ success: false, error: 'Cross-origin request denied.' }, { status: 403 });
     }
     const body = await req.json();
