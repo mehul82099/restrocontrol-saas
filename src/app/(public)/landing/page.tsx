@@ -68,16 +68,7 @@ const organizationLd = {
   name: 'Mystify me',
   brand: 'RestroControl',
   url: SITE_URL,
-  email: 'mehuljhabak10@gmail.com',
-  telephone: '+918209951190',
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: 'B-297, Janta Colony, Adarsh Nagar',
-    addressLocality: 'Jaipur',
-    addressRegion: 'Rajasthan',
-    postalCode: '302004',
-    addressCountry: 'IN',
-  },
+  logo: `${SITE_URL}/icon-512.png`,
 };
 
 const softwareLd = {
