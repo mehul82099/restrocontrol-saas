@@ -1,3 +1,4 @@
+// Access: Current DB session required; any authenticated role for shared read/self-service. Tenant/outlet scope from authenticated context.
 import { invalidateUserSessions } from '@/server/services/auth.service';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
