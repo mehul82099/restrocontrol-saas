@@ -1,3 +1,4 @@
+// Access: GET OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER; fresh SQL session/outlet authority.
 import { createHash } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/server/auth/jwt';
