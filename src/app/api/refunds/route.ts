@@ -1,3 +1,4 @@
+// Access: Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context.
 import { safeRoute } from '@/server/services/safe-route';
 import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
