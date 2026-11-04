@@ -1,4 +1,4 @@
-// Access: Current DB session required; access:kot. Tenant/outlet scope from authenticated context.
+// Access: access:kot [OWNER, MANAGER, KITCHEN_STAFF]. Current DB session and tenant/outlet scope required.
 import { protectRead } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
