@@ -1,3 +1,4 @@
+// Access: Public invite capability preview.
 import { NextRequest, NextResponse } from 'next/server';
 import { lookupUsableInvite } from '@/server/services/invite.service';
 
