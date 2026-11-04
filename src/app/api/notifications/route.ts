@@ -1,3 +1,4 @@
+// Access: GET any current role (WAITER gets empty list); POST all current roles except WAITER, same tenant/outlet.
 import { protectRead } from '@/server/services/api-validation';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
