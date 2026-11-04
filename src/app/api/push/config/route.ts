@@ -1,3 +1,4 @@
+// Access: GET order-facing roles only (OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER).
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { pushConfigured } from '@/server/services/staff-push.service';
