@@ -3,7 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "security-hardening": false,
-      "fix/public-origin-behind-proxy": false
+      "fix/public-origin-behind-proxy": false,
+      "fix/security-review-nov5": false
     }
   }
 }
