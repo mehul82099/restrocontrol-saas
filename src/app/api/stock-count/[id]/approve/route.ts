@@ -1,4 +1,4 @@
-// Access: Current DB session required; approve:stock_count. Tenant/outlet scope from authenticated context.
+// Access: approve:stock_count [OWNER, MANAGER]. Current DB session and tenant/outlet scope required.
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
