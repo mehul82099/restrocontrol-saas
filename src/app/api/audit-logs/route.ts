@@ -1,4 +1,4 @@
-// Access: Current DB session required; view:audit_logs. Tenant/outlet scope from authenticated context.
+// Access: view:audit_logs [OWNER]. Current DB session and tenant/outlet scope required.
 import { protectRead } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
