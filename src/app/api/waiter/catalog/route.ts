@@ -1,4 +1,4 @@
-// Access: Current DB session required; access:waiter. Tenant/outlet scope from authenticated context.
+// Access: access:waiter [OWNER, WAITER]. Current DB session and tenant/outlet scope required.
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';
