@@ -1,4 +1,4 @@
-// Access: Current DB session required; manage:users. Tenant/outlet scope from authenticated context.
+// Access: manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required.
 import { protectRead } from '@/server/services/api-validation';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
