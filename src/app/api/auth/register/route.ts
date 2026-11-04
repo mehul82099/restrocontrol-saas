@@ -1,3 +1,4 @@
+// Access: Public signup; DB-backed IP/identity throttling.
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
