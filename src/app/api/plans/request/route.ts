@@ -1,3 +1,4 @@
+// Access: Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context.
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { AuditService } from '@/server/services/audit.service';
