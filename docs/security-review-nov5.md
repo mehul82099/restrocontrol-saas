@@ -1,7 +1,7 @@
 # RestroControl security review - November 5, 2026
 
 ## Status
-Local fixes passed build/typecheck and regression tests. Guarded branch delivery is in progress, not ready for merge or production. PR32 is separate and unapproved. No production DB/DNS/dashboard changes or real payments were made.
+Local fixes passed build/typecheck and regression tests. Guarded branch delivery is complete and remote file bytes matched the tested local files. PR review, CI and explicit publish approval remain required; not deployed to production. PR32 is separate and unapproved. No production DB/DNS/dashboard changes or real payments were made.
 
 ## Verified and prepared
 - Existing Node handlers use DB-backed current session, role permissions and tenant/outlet scope. Public auth routes use signed capabilities/abuse budgets; provider webhooks use signatures. Operator refund administration is explicitly cross-tenant and gated by a configured user-ID allowlist, not an ordinary OWNER role.
@@ -17,7 +17,7 @@ Local fixes passed build/typecheck and regression tests. Guarded branch delivery
 -201 new role-denial/CSP/config assertions PASS. These do not demonstrate every allowed route and tenant isolation by themselves.
 - Existing suites rerun on isolated localhost PostgreSQL:30 security,12 session,31 live order/push,15 invite,21 attendance plus auth-request security suite PASS. These include forged DB roles, disabled/revoked sessions, foreign-outlet and foreign-tenant references, bounded bodies and allowed operation flows. They do not certify full application security.
 - Passive production checks: requested unauthenticated catalog/live-order APIs return401 + private,no-store. Baseline security headers exist, HSTS absent on new domain, robots still uses old sitemap until PR32 approved. Public HTML shells cacheable and currently client-render personal data; do not put user data into those shared shells.
-- Screenshots generated locally, hosted visual verification still pending. Real payment, provider checkout behavior under future enforced CSP, and physical device push remain untested.
+- Local desktop login and mobile signup screenshots inspected: readable, intact layout, no overlap. Hosted deployment visual verification remains pending. Real payment, provider checkout behavior under future enforced CSP, and physical device push remain untested.
 
 ## Checklist proposals not blindly adopted
 - Canonical/OG/robots/sitemap new-domain fix is already PR32, pending explicit approval. Current public sitemap includes refunds/shipping as deliberate public pages, not private shells. Do not remove legitimate pages just to mirror a sample list.
@@ -36,4 +36,4 @@ Local fixes passed build/typecheck and regression tests. Guarded branch delivery
 - Source-only changes require PR review then explicit publish approval; no database migration is required by this patch.
 
 ## Sources
-See sources.md. Primary official source https://nextjs.org/blog/november-2026-security-release and advisory indices https://github.com/vercel/next.js/security/advisories , https://github.com/facebook/react/security/advisories . Applicability depends on cache/runtime/image/response-forwarding configuration; an installed-version match alone is not proof of exploitability.
+See security-review-sources.md. Primary official source https://nextjs.org/blog/november-2026-security-release and advisory indices https://github.com/vercel/next.js/security/advisories , https://github.com/facebook/react/security/advisories . Applicability depends on cache/runtime/image/response-forwarding configuration; an installed-version match alone is not proof of exploitability.
