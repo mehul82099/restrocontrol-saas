@@ -1,3 +1,4 @@
+// Access: Current DB session required; access:pos. Tenant/outlet scope from authenticated context.
 import { prisma } from '@/server/db/prisma';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
