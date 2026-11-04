@@ -1,4 +1,4 @@
-// Access: Current DB session required; manage:users. Tenant/outlet scope from authenticated context.
+// Access: manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required.
 import { safeRoute } from '@/server/services/safe-route';
 import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
