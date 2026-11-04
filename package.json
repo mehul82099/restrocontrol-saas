@@ -20,7 +20,8 @@
     "test:google-signatures": "node tests/google-id-token-verification.js",
     "test:auth-requests": "node tests/auth-request-security-regression.js",
     "test:sessions": "node tests/auth-session-regression.js",
-    "test:attendance": "node tests/attendance-regression.js"
+    "test:attendance": "node tests/attendance-regression.js",
+    "test:security-review": "node tests/security-review-regression.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",
