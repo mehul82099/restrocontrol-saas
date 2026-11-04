@@ -1,0 +1,262 @@
+[
+  {
+    "route": "/api/analytics/dashboard",
+    "policy": "Current DB session required; view:analytics. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/analytics/food-cost",
+    "policy": "Current DB session required; view:food_cost. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/analytics/variance",
+    "policy": "Current DB session required; view:variance. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/attendance",
+    "policy": "GET OWNER or MANAGER, same restaurant."
+  },
+  {
+    "route": "/api/audit-logs",
+    "policy": "Current DB session required; view:audit_logs. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/auth/change-password",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/auth/forgot-password",
+    "policy": "Public reset request; generic response and DB-backed abuse budgets."
+  },
+  {
+    "route": "/api/auth/google/callback",
+    "policy": "Public OAuth callback; signed state and verified Google identity."
+  },
+  {
+    "route": "/api/auth/google/pending",
+    "policy": "Public signed Google-signup capability only."
+  },
+  {
+    "route": "/api/auth/google/start",
+    "policy": "Public OAuth initiation."
+  },
+  {
+    "route": "/api/auth/invite/preview",
+    "policy": "Public invite capability preview."
+  },
+  {
+    "route": "/api/auth/invite/register",
+    "policy": "Public single-use invite capability registration."
+  },
+  {
+    "route": "/api/auth/login",
+    "policy": "Public password login; DB-backed IP/identity throttling."
+  },
+  {
+    "route": "/api/auth/logout",
+    "policy": "Session capability revocation; safe idempotent logout."
+  },
+  {
+    "route": "/api/auth/me",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/auth/providers",
+    "policy": "Public provider availability, no secret values."
+  },
+  {
+    "route": "/api/auth/register",
+    "policy": "Public signup; DB-backed IP/identity throttling."
+  },
+  {
+    "route": "/api/auth/reset-password",
+    "policy": "Public single-use reset capability."
+  },
+  {
+    "route": "/api/billing/live/[action]",
+    "policy": "GET status public; POST webhook provider signature; other actions OWNER (manage:subscription), same tenant."
+  },
+  {
+    "route": "/api/billing/test/cancel",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/checkout",
+    "policy": "GET/POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/upgrade",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/verify",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/webhook",
+    "policy": "Public provider webhook; signature verification, no browser role."
+  },
+  {
+    "route": "/api/categories",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:menu. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/csp-report",
+    "policy": "Public bounded untrusted CSP telemetry; no account data."
+  },
+  {
+    "route": "/api/customers",
+    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/ingredients",
+    "policy": "Current DB session required; view:inventory, manage:ingredients. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/inventory/ledger",
+    "policy": "Current DB session required; view:inventory. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/inventory/low-stock",
+    "policy": "Current DB session required; view:inventory. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/inventory",
+    "policy": "Current DB session required; view:inventory, manage:inventory. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/kot/[id]/status",
+    "policy": "Current DB session required; update:kot_status. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/kot",
+    "policy": "Current DB session required; access:kot. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/live/orders",
+    "policy": "GET OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER; fresh SQL session/outlet authority."
+  },
+  {
+    "route": "/api/menu",
+    "policy": "Current DB session required; access:pos, manage:menu. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/notifications",
+    "policy": "GET any current role (WAITER gets empty list); POST all current roles except WAITER, same tenant/outlet."
+  },
+  {
+    "route": "/api/orders/[id]/cancel",
+    "policy": "Current DB session required; cancel:order. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/orders/[id]/refund",
+    "policy": "Current DB session required; refund:order. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/orders",
+    "policy": "Current DB session required; manage:orders. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/outlets",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:outlets. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/plans/request",
+    "policy": "Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/pos/catalog",
+    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/pos/checkout",
+    "policy": "Current DB session required; access:pos. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/purchases/orders",
+    "policy": "Current DB session required; manage:purchases. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/purchases/receive",
+    "policy": "Current DB session required; manage:purchases. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/purchases/suppliers",
+    "policy": "Current DB session required; manage:suppliers. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/push/config",
+    "policy": "GET order-facing roles only (OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER)."
+  },
+  {
+    "route": "/api/push/current",
+    "policy": "GET same push capability owner/session and order-facing role, same tenant/outlet."
+  },
+  {
+    "route": "/api/push/subscription",
+    "policy": "POST order-facing roles with live cookie session; DELETE any current authenticated role, own session only."
+  },
+  {
+    "route": "/api/recipes",
+    "policy": "Current DB session required; manage:recipes. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/refunds/admin",
+    "policy": "GET/PATCH explicit operator user-ID allowlist, not a tenant-admin role. Cross-tenant access is intentional operator scope."
+  },
+  {
+    "route": "/api/refunds",
+    "policy": "Current DB session required; manage:subscription. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/reports",
+    "policy": "Current DB session required; view:reports. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/restaurant",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:restaurant. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/staff-invites/[id]",
+    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/staff-invites",
+    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/stock-count/[id]/approve",
+    "policy": "Current DB session required; approve:stock_count. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/stock-count",
+    "policy": "Current DB session required; manage:stock_count. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/subscriptions",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:subscription. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/tables",
+    "policy": "Current DB session required; any authenticated role for shared read/self-service, manage:restaurant. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/users",
+    "policy": "Current DB session required; manage:users. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/waiter/catalog",
+    "policy": "Current DB session required; access:waiter. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/waiter/orders",
+    "policy": "Current DB session required; access:waiter. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/wastage/[id]/approve",
+    "policy": "Current DB session required; approve:wastage. Tenant/outlet scope from authenticated context."
+  },
+  {
+    "route": "/api/wastage",
+    "policy": "Current DB session required; manage:wastage. Tenant/outlet scope from authenticated context."
+  }
+]
