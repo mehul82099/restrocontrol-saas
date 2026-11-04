@@ -1,3 +1,4 @@
+// Access: Current DB session required; view:inventory, manage:inventory. Tenant/outlet scope from authenticated context.
 import { protectRead } from '@/server/services/api-validation';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
