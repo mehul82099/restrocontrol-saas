@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HumanCheck from '@/components/auth/HumanCheck';
 import WorldAuthShell from '@/components/world/WorldAuthShell';
 import { Scale, ArrowRight } from 'lucide-react';
 
@@ -20,19 +21,23 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [googleOn, setGoogleOn] = useState(false);
+  const [human, setHuman] = useState<{enabled: boolean; siteKey: string} | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [humanReset, setHumanReset] = useState(0);
+  const [configRetry, setConfigRetry] = useState(0);
   const [googleEmail, setGoogleEmail] = useState('');
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('error');
     if (code === 'google_unavailable') setError('Google sign-up is not available yet. Use your email.');
-    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleOn(!!d.google)).catch(() => {});
+    fetch('/api/auth/providers').then(r => r.json()).then(d => {setGoogleOn(!!d.google); setHuman(d.turnstile || {enabled: false, siteKey: ''});}).catch(() => {setHuman({enabled: true, siteKey: ''});});
     if (new URLSearchParams(window.location.search).get('google') === '1') {
       fetch('/api/auth/google/pending').then(r => r.ok ? r.json() : null).then(d => {
         if (d?.success) { setGoogleEmail(d.email); setOwnerName(d.name || ''); }
         else setError('Google verification expired. Please continue with Google again.');
       }).catch(() => {});
     }
-  }, []);
+  }, [configRetry]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +47,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(googleEmail ? { google: true, restaurantName, ownerName, phone } : { restaurantName, ownerName, email, phone, password }),
+        body: JSON.stringify(googleEmail ? { google: true, restaurantName, ownerName, phone } : { restaurantName, ownerName, email, phone, password, turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Sign-up failed.');
@@ -50,6 +55,8 @@ export default function SignupPage() {
     } catch (err: any) {
       setError(err.message || 'Sign-up failed.');
     } finally {
+      setTurnstileToken('');
+      setHumanReset(n => n + 1);
       setLoading(false);
     }
   };
@@ -67,9 +74,10 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <div className="mb-5 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">{error}</div>
+          <div role="alert" className="mb-5 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">{error} {error.startsWith("We couldn't create this account.") && <><Link href="/login" className="underline">Sign in</Link> or <Link href="/forgot-password" className="underline">reset your password</Link>.</>}</div>
         )}
 
+        {human?.enabled && !human.siteKey && <p role="alert" className="mb-4 text-xs text-rose-700">Sign-in verification settings could not load. <button type="button" className="underline" onClick={() => setConfigRetry(n => n + 1)}>Retry loading settings</button></p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className={labelClass}>Restaurant name</label>
@@ -101,9 +109,10 @@ export default function SignupPage() {
             <p className="text-[11px] text-stone-500 mt-1">At least 10 characters, with a letter and a number.</p>
           </div>
           )}
+          {human?.enabled && !googleEmail && <HumanCheck siteKey={human.siteKey} action="register" reset={humanReset} onToken={setTurnstileToken} />}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!googleEmail && (!human || (human.enabled && !turnstileToken)))}
             className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             {loading ? (
