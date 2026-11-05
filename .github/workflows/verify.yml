@@ -44,5 +44,7 @@ jobs:
       - run: npm run test:invites
       - run: npm run test:security
       - run: npm run test:security-review
+      - run: npm run test:turnstile
+      - run: npm run test:auth-human
       - run: npm audit --omit=dev --audit-level=moderate
       - run: npm run build
