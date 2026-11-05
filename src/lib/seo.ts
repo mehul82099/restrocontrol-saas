@@ -5,7 +5,7 @@
 // the sitemap. Flipped to true on Mehul's decision (WhatsApp, 2026-10-17).
 export const INDEX_PUBLIC_PAGES = true;
 
-export const SITE_URL = 'https://restrocontrol-saas-qjcj.vercel.app';
+export const SITE_URL = 'https://restrocontrol.new.tg';
 export const SITE_NAME = 'RestroControl';
 export const SITE_TITLE = 'RestroControl | Inventory-First Restaurant POS & Management SaaS';
 export const SITE_DESCRIPTION =
