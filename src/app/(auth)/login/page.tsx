@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HumanCheck from '@/components/auth/HumanCheck';
 import WorldAuthShell from '@/components/world/WorldAuthShell';
 import { Scale, Lock, Mail, ArrowRight, ShieldCheck, CheckCircle } from 'lucide-react';
 
@@ -13,6 +14,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [googleOn, setGoogleOn] = useState(false);
+  const [human, setHuman] = useState<{enabled: boolean; siteKey: string} | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [humanReset, setHumanReset] = useState(0);
+  const [configRetry, setConfigRetry] = useState(0);
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get('error');
@@ -25,8 +30,8 @@ export default function LoginPage() {
       google_failed: 'Google sign-in could not be completed. Please try again or use your email.',
     };
     if (code && messages[code]) setError(messages[code]);
-    fetch('/api/auth/providers').then(r => r.json()).then(d => setGoogleOn(!!d.google)).catch(() => {});
-  }, []);
+    fetch('/api/auth/providers').then(r => r.json()).then(d => {setGoogleOn(!!d.google); setHuman(d.turnstile || {enabled: false, siteKey: ''});}).catch(() => {setHuman({enabled: true, siteKey: ''});});
+  }, [configRetry]);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -37,7 +42,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, turnstileToken }),
       });
 
       const data = await res.json();
@@ -60,6 +65,8 @@ export default function LoginPage() {
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
+      setTurnstileToken('');
+      setHumanReset(n => n + 1);
       setLoading(false);
     }
   };
@@ -85,6 +92,7 @@ export default function LoginPage() {
           </div>
         )}
 
+        {human?.enabled && !human.siteKey && <p role="alert" className="mb-4 text-xs text-rose-700">Sign-in verification settings could not load. <button type="button" className="underline" onClick={() => setConfigRetry(n => n + 1)}>Retry loading settings</button></p>}
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
@@ -129,9 +137,10 @@ export default function LoginPage() {
             </Link>
           </div>
 
+          {human?.enabled && <HumanCheck siteKey={human.siteKey} action="login" reset={humanReset} onToken={setTurnstileToken} />}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !human || (human.enabled && !turnstileToken)}
             className="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             {loading ? (
