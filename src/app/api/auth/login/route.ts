@@ -1,3 +1,5 @@
+import { publicOrigin } from '@/server/public-origin';
+import { verifyTurnstile } from '@/server/services/turnstile';
 // Access: Public password login; DB-backed IP/identity throttling.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
@@ -9,7 +11,7 @@ import { isDemoAccount } from '@/server/auth/demo';
 
 async function login(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { email, password, turnstileToken } = await req.json();
 
     if (typeof email !== 'string' || typeof password !== 'string' || email.length > 254 || password.length > 72 || !email || !password) {
       return NextResponse.json(
@@ -17,6 +19,8 @@ async function login(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (!await verifyTurnstile(turnstileToken, 'login', req.nextUrl.hostname)) return NextResponse.json({success: false, error: 'Please complete the human check and try again.'}, {status: 400});
 
     const candidates = await prisma.user.findMany({
       where: { email: email.toLowerCase().trim() },
