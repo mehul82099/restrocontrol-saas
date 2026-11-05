@@ -1,3 +1,4 @@
+import { verifyTurnstile } from '@/server/services/turnstile';
 // Access: Public signup; DB-backed IP/identity throttling.
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
@@ -52,12 +53,15 @@ async function register(req: NextRequest) {
 
     if (isDemoEmail(email)) return NextResponse.json({ success: false, error: 'Enter a valid email address.' }, { status: 400 });
 
+    // A valid signed Google signup capability already proves the Google flow; never trust body.google alone.
+    if (!viaGoogle && !await verifyTurnstile(body.turnstileToken, 'register', req.nextUrl.hostname)) return NextResponse.json({success: false, error: 'Please complete the human check and try again.'}, {status: 400});
+
     const recent = await prisma.restaurant.count({ where: { createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } } });
     if (recent >= MAX_SIGNUPS_PER_HOUR) return NextResponse.json({ success: false, error: 'Sign-ups are busy. Try again later.' }, { status: 429 });
 
     // Login resolves a user by email alone, so an email can belong to only one account.
     const existing = await prisma.user.findFirst({ where: { email }, select: { id: true } });
-    if (existing) return NextResponse.json({ success: false, error: 'An account with this email already exists. Sign in instead.' }, { status: 409 });
+    if (existing) return NextResponse.json({ success: false, error: "We couldn't create this account. If you already signed up with this email, sign in or reset your password." }, { status: 400 });
 
     let plan = await prisma.plan.findUnique({ where: { code: 'WEBSITE_SINGLE' } });
     if (!plan) {
