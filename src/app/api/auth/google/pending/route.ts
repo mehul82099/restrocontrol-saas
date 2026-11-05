@@ -1,3 +1,4 @@
+// Access: Public signed Google-signup capability only.
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPurposeToken } from '@/server/auth/jwt';
 import { GOOGLE_SIGNUP_COOKIE, GOOGLE_SIGNUP_PURPOSE } from '@/server/auth/google';

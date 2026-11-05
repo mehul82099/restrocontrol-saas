@@ -1,3 +1,4 @@
+// Access: Public OAuth callback; signed state and verified Google identity.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { signPurposeToken } from '@/server/auth/jwt';

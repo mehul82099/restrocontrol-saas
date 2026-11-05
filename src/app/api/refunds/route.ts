@@ -1,3 +1,4 @@
+// Access: manage:subscription [OWNER]. Current DB session and tenant/outlet scope required.
 import { safeRoute } from '@/server/services/safe-route';
 import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';

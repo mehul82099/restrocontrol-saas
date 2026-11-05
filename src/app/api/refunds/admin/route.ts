@@ -1,3 +1,4 @@
+// Access: GET/PATCH explicit operator user-ID allowlist, not a tenant-admin role. Cross-tenant access is intentional operator scope.
 import { safeRoute } from '@/server/services/safe-route';
 import { readBoundedText } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';

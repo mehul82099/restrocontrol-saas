@@ -1,3 +1,4 @@
+// Access: GET/POST OWNER (manage:subscription) via billing/test-route owner helper.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { owner,jsonBody,failure } from '@/server/billing/test-route';

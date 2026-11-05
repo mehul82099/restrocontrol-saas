@@ -1,3 +1,4 @@
+// Access: Session capability revocation; safe idempotent logout.
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionHash } from '@/server/services/push-policy';
 import { verifyToken } from '@/server/auth/jwt';

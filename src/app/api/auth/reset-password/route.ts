@@ -1,3 +1,4 @@
+// Access: Public single-use reset capability.
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { invalidateUserSessions } from '@/server/services/auth.service';
 import { NextRequest, NextResponse } from 'next/server';

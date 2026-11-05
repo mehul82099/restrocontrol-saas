@@ -1,3 +1,4 @@
+// Access: Public provider availability, no secret values.
 import { NextResponse } from 'next/server';
 import { googleConfig } from '@/server/auth/google';
 

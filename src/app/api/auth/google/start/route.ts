@@ -1,3 +1,4 @@
+// Access: Public OAuth initiation.
 import { NextRequest, NextResponse } from 'next/server';
 import { INVITE_COOKIE, validTokenShape } from '@/server/services/invite.service';
 import { googleConfig, redirectUri, randomToken, GOOGLE_STATE_COOKIE } from '@/server/auth/google';

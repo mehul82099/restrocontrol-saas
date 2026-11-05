@@ -1,3 +1,4 @@
+// Access: shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:subscription [OWNER]. Current DB session and tenant/outlet scope required.
 import { protectRead } from '@/server/services/api-validation';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';

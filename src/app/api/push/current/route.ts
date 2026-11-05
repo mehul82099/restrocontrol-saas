@@ -1,3 +1,4 @@
+// Access: GET same push capability owner/session and order-facing role, same tenant/outlet.
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';
 import { prisma } from '@/server/db/prisma';

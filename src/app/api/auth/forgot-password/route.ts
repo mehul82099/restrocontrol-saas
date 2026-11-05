@@ -1,3 +1,4 @@
+// Access: Public reset request; generic response and DB-backed abuse budgets.
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';

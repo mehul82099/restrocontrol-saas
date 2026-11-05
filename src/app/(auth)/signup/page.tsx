@@ -73,31 +73,31 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className={labelClass}>Restaurant name</label>
-            <input className={inputClass} required maxLength={80} value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} />
+            <input className={inputClass} required autoComplete="organization" maxLength={80} value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} />
           </div>
           <div>
             <label className={labelClass}>Your name</label>
-            <input className={inputClass} required maxLength={80} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
+            <input className={inputClass} required autoComplete="name" maxLength={80} value={ownerName} onChange={(e) => setOwnerName(e.target.value)} />
           </div>
           {googleEmail ? (
             <div>
               <label className={labelClass}>Google account</label>
-              <input className={inputClass} readOnly value={googleEmail} />
+              <input className={inputClass} autoComplete="email" readOnly value={googleEmail} />
             </div>
           ) : (
           <div>
             <label className={labelClass}>Email address</label>
-            <input type="email" className={inputClass} required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" autoComplete="email" className={inputClass} required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           )}
           <div>
             <label className={labelClass}>Phone (optional)</label>
-            <input type="tel" className={inputClass} maxLength={20} value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input type="tel" autoComplete="tel" className={inputClass} maxLength={20} value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           {!googleEmail && (
           <div>
             <label className={labelClass}>Password</label>
-            <input type="password" className={inputClass} required minLength={10} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input type="password" autoComplete="new-password" className={inputClass} required minLength={10} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} />
             <p className="text-[11px] text-stone-500 mt-1">At least 10 characters, with a letter and a number.</p>
           </div>
           )}

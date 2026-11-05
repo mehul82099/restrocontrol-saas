@@ -12,6 +12,7 @@ const NOINDEX_ROUTES = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
   async redirects() {
     return [
       { source: '/dashboard', destination: '/', permanent: true },
@@ -22,13 +23,15 @@ const nextConfig = {
   },
   async headers() {
     return [{source: '/:path*', headers: [
+      {key: 'Strict-Transport-Security', value: 'max-age=31536000'},
       {key: 'X-Content-Type-Options', value: 'nosniff'},
       {key: 'X-Frame-Options', value: 'DENY'},
       {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
       {key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()'},
-      {key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'self'"},
+      {key: 'Content-Security-Policy-Report-Only', value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.razorpay.com; frame-src https://api.razorpay.com https://*.razorpay.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report"},
       {key: 'Content-Security-Policy', value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"},
     ]}, {source: '/api/:path*', headers: [{key: 'Cache-Control', value: 'private, no-store'}]},
+      // These are client-only shells. Never render personal data into a shared cached shell.
       ...NOINDEX_ROUTES.map((route) => ({
         source: `/${route}/:path*`,
         headers: [{key: 'X-Robots-Tag', value: 'noindex, nofollow'}],

@@ -1,3 +1,4 @@
+// Access: Public provider webhook; signature verification, no browser role.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { testConfig,validSignature } from '@/server/billing/razorpay-test';

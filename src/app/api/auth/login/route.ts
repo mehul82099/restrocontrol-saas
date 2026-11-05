@@ -1,3 +1,4 @@
+// Access: Public password login; DB-backed IP/identity throttling.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import bcrypt from 'bcryptjs';
@@ -99,7 +100,7 @@ async function login(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 12 * 60 * 60, // 7 days
+      maxAge: 12 * 60 * 60, // 12 hours
     });
 
     return response;

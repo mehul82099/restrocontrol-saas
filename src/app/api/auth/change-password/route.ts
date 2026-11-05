@@ -1,3 +1,4 @@
+// Access: shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required.
 import { invalidateUserSessions } from '@/server/services/auth.service';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';

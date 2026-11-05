@@ -1,0 +1,262 @@
+[
+  {
+    "route": "/api/analytics/dashboard",
+    "policy": "view:analytics [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/analytics/food-cost",
+    "policy": "view:food_cost [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/analytics/variance",
+    "policy": "view:variance [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/attendance",
+    "policy": "GET OWNER or MANAGER, same restaurant."
+  },
+  {
+    "route": "/api/audit-logs",
+    "policy": "view:audit_logs [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/auth/change-password",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/auth/forgot-password",
+    "policy": "Public reset request; generic response and DB-backed abuse budgets."
+  },
+  {
+    "route": "/api/auth/google/callback",
+    "policy": "Public OAuth callback; signed state and verified Google identity."
+  },
+  {
+    "route": "/api/auth/google/pending",
+    "policy": "Public signed Google-signup capability only."
+  },
+  {
+    "route": "/api/auth/google/start",
+    "policy": "Public OAuth initiation."
+  },
+  {
+    "route": "/api/auth/invite/preview",
+    "policy": "Public invite capability preview."
+  },
+  {
+    "route": "/api/auth/invite/register",
+    "policy": "Public single-use invite capability registration."
+  },
+  {
+    "route": "/api/auth/login",
+    "policy": "Public password login; DB-backed IP/identity throttling."
+  },
+  {
+    "route": "/api/auth/logout",
+    "policy": "Session capability revocation; safe idempotent logout."
+  },
+  {
+    "route": "/api/auth/me",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/auth/providers",
+    "policy": "Public provider availability, no secret values."
+  },
+  {
+    "route": "/api/auth/register",
+    "policy": "Public signup; DB-backed IP/identity throttling."
+  },
+  {
+    "route": "/api/auth/reset-password",
+    "policy": "Public single-use reset capability."
+  },
+  {
+    "route": "/api/billing/live/[action]",
+    "policy": "GET status public; POST webhook provider signature; other actions OWNER (manage:subscription), same tenant."
+  },
+  {
+    "route": "/api/billing/test/cancel",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/checkout",
+    "policy": "GET/POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/upgrade",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/verify",
+    "policy": "POST OWNER (manage:subscription) via billing/test-route owner helper."
+  },
+  {
+    "route": "/api/billing/test/webhook",
+    "policy": "Public provider webhook; signature verification, no browser role."
+  },
+  {
+    "route": "/api/categories",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:menu [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/csp-report",
+    "policy": "Public bounded untrusted CSP telemetry; no account data."
+  },
+  {
+    "route": "/api/customers",
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/ingredients",
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]; manage:ingredients [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/inventory/ledger",
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/inventory/low-stock",
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/inventory",
+    "policy": "view:inventory [OWNER, MANAGER, CASHIER, INVENTORY_MANAGER]; manage:inventory [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/kot/[id]/status",
+    "policy": "update:kot_status [OWNER, MANAGER, KITCHEN_STAFF]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/kot",
+    "policy": "access:kot [OWNER, MANAGER, KITCHEN_STAFF]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/live/orders",
+    "policy": "GET OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER; fresh SQL session/outlet authority."
+  },
+  {
+    "route": "/api/menu",
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]; manage:menu [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/notifications",
+    "policy": "GET any current role (WAITER gets empty list); POST all current roles except WAITER, same tenant/outlet."
+  },
+  {
+    "route": "/api/orders/[id]/cancel",
+    "policy": "cancel:order [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/orders/[id]/refund",
+    "policy": "refund:order [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/orders",
+    "policy": "manage:orders [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/outlets",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:outlets [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/plans/request",
+    "policy": "manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/pos/catalog",
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/pos/checkout",
+    "policy": "access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/purchases/orders",
+    "policy": "manage:purchases [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/purchases/receive",
+    "policy": "manage:purchases [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/purchases/suppliers",
+    "policy": "manage:suppliers [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/push/config",
+    "policy": "GET order-facing roles only (OWNER, MANAGER, CASHIER, KITCHEN_STAFF, WAITER)."
+  },
+  {
+    "route": "/api/push/current",
+    "policy": "GET same push capability owner/session and order-facing role, same tenant/outlet."
+  },
+  {
+    "route": "/api/push/subscription",
+    "policy": "POST order-facing roles with live cookie session; DELETE any current authenticated role, own session only."
+  },
+  {
+    "route": "/api/recipes",
+    "policy": "manage:recipes [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/refunds/admin",
+    "policy": "GET/PATCH explicit operator user-ID allowlist, not a tenant-admin role. Cross-tenant access is intentional operator scope."
+  },
+  {
+    "route": "/api/refunds",
+    "policy": "manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/reports",
+    "policy": "view:reports [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/restaurant",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:restaurant [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/staff-invites/[id]",
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/staff-invites",
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/stock-count/[id]/approve",
+    "policy": "approve:stock_count [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/stock-count",
+    "policy": "manage:stock_count [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/subscriptions",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:subscription [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/tables",
+    "policy": "shared read/self-service [OWNER, MANAGER, WAITER, CASHIER, KITCHEN_STAFF, INVENTORY_MANAGER]; manage:restaurant [OWNER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/users",
+    "policy": "manage:users [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/waiter/catalog",
+    "policy": "access:waiter [OWNER, WAITER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/waiter/orders",
+    "policy": "access:waiter [OWNER, WAITER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/wastage/[id]/approve",
+    "policy": "approve:wastage [OWNER, MANAGER]. Current DB session and tenant/outlet scope required."
+  },
+  {
+    "route": "/api/wastage",
+    "policy": "manage:wastage [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required."
+  }
+]

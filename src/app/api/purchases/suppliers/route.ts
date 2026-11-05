@@ -1,3 +1,4 @@
+// Access: manage:suppliers [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required.
 import { protectRead } from '@/server/services/api-validation';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';

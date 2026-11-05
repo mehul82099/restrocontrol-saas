@@ -1,3 +1,4 @@
+// Access: access:pos [OWNER, MANAGER, CASHIER]. Current DB session and tenant/outlet scope required.
 import { prisma } from '@/server/db/prisma';
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';

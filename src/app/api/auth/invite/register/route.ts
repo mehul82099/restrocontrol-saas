@@ -1,3 +1,4 @@
+// Access: Public single-use invite capability registration.
 import { NextRequest, NextResponse } from 'next/server';
 import { protectAuthRequest } from '@/server/services/auth-request-security';
 import { redeemInvite, InviteError, landingFor } from '@/server/services/invite.service';

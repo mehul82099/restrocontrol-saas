@@ -1,3 +1,4 @@
+// Access: manage:purchases [OWNER, MANAGER, INVENTORY_MANAGER]. Current DB session and tenant/outlet scope required.
 import { protectMutation } from '@/server/services/api-validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/server/auth/middleware';

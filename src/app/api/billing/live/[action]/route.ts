@@ -1,3 +1,4 @@
+// Access: GET status public; POST webhook provider signature; other actions OWNER (manage:subscription), same tenant.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { authenticateRequest } from '@/server/auth/middleware';
