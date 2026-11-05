@@ -79,7 +79,8 @@ const good = {sub: 'test-subject', aud: 'cid', iss: 'https://accounts.google.com
     const src = fs.readFileSync(path.resolve(__dirname, '../src/app/api/auth/register/route.ts'), 'utf8');
     assert.match(src, /verifyPurposeToken\(raw, GOOGLE_SIGNUP_PURPOSE\)/);
     assert.match(src, /email = g\.email/);
-    assert.match(src, /An account with this email already exists/);
+    assert.match(src, /We couldn.t create this account/);
+    assert.doesNotMatch(src, /status: 409/);
     const cb = fs.readFileSync(path.resolve(__dirname, '../src/app/api/auth/google/callback/route.ts'), 'utf8');
     assert.match(cb, /already_registered/);
   });
