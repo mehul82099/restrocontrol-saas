@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "security-hardening": false,
       "fix/public-origin-behind-proxy": false,
-      "fix/security-review-nov5": false
+      "fix/security-review-nov5": false,
+      "fix/new-domain-qa-nov5": false
     }
   }
 }
