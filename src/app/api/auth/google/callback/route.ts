@@ -1,4 +1,8 @@
 // Access: Public OAuth callback; signed state and verified Google identity.
+// CHANGE (app handoff): state cookie parsed via parseOAuthStateCookie (accepts
+// legacy 3-part and new 5-part app-mode values). On a successful app-mode
+// login, the browser keeps its normal session AND the server mints a one-time
+// PKCE-bound handoff code, redirecting to the app-complete page.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/db/prisma';
 import { signPurposeToken } from '@/server/auth/jwt';
@@ -7,6 +11,8 @@ import { issueAttendanceToken } from '@/server/services/attendance.service';
 import { redeemInvite, InviteError, landingFor, INVITE_COOKIE } from '@/server/services/invite.service';
 import { isDemoAccount, isDemoEmail } from '@/server/auth/demo';
 import { googleConfig, redirectUri, readIdToken, safeEqual, GOOGLE_STATE_COOKIE, GOOGLE_SIGNUP_COOKIE, GOOGLE_SIGNUP_PURPOSE } from '@/server/auth/google';
+import { parseOAuthStateCookie, createHandoff } from '@/server/auth/app-handoff';
+import { prismaHandoffStore } from '@/server/auth/app-handoff-store';
 import { publicOrigin } from '@/server/public-origin';
 
 export async function GET(req: NextRequest) {
@@ -23,7 +29,10 @@ export async function GET(req: NextRequest) {
     const params = new URL(req.url).searchParams;
     const code = params.get('code');
     const state = params.get('state');
-    const [cookieState, nonce, mode] = (req.cookies.get(GOOGLE_STATE_COOKIE)?.value || '').split('.');
+    const oauth = parseOAuthStateCookie(req.cookies.get(GOOGLE_STATE_COOKIE)?.value);
+    const cookieState = oauth?.state;
+    const nonce = oauth?.nonce;
+    const mode = oauth?.mode;
     if (params.get('error') || !code || !state || !cookieState || !nonce || !safeEqual(state, cookieState)) return fail('google_failed');
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -38,6 +47,7 @@ export async function GET(req: NextRequest) {
 
     if (mode === 'invite') {
       // Staff invite: only this path may add a Google user to an existing restaurant, with the invite's preset role.
+      // App handoff for invites is out of scope (v1): invite mode ignores app mode.
       const inviteToken = req.cookies.get(INVITE_COOKIE)?.value || '';
       try {
         const r = await redeemInvite({ token: inviteToken, email: identity.email, name: identity.name || identity.email.split('@')[0], ip: req.headers.get('x-forwarded-for'), userAgent: req.headers.get('user-agent') });
@@ -60,6 +70,7 @@ export async function GET(req: NextRequest) {
     if (candidates.length === 0 && !isDemoEmail(identity.email)) {
       if (mode !== 'signup') return fail('google_no_account');
       // New email: carry the Google-verified identity to the sign-up form (restaurant name still needed).
+      // App handoff for sign-up completion is out of scope (v1): the browser finishes sign-up.
       const r = NextResponse.redirect(`${origin}/signup?google=1`);
       r.cookies.set(GOOGLE_SIGNUP_COOKIE, signPurposeToken(GOOGLE_SIGNUP_PURPOSE, { email: identity.email, name: identity.name || '' }), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/api/auth', maxAge: 15 * 60 });
       r.cookies.set(GOOGLE_STATE_COOKIE, '', { path: '/api/auth/google', maxAge: 0 });
@@ -74,7 +85,14 @@ export async function GET(req: NextRequest) {
     await AuditService.log({ restaurantId: user.restaurantId, userId: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ipAddress: req.headers.get('x-forwarded-for') || '127.0.0.1', userAgent: req.headers.get('user-agent') });
 
     const dest = user.role === 'INVENTORY_MANAGER' ? '/inventory' : landingFor(user.role);
-    const res = NextResponse.redirect(`${origin}${dest}`);
+    // App handoff: mint the one-time PKCE-bound code and land on app-complete.
+    // The code travels in the URL FRAGMENT: never sent to any server, never in
+    // access logs; on Android with verified App Links the OS hands it to the app.
+    // The browser session below is the normal web session for the same identity.
+    const target = oauth?.app && oauth?.challenge
+      ? `${origin}/api/auth/google/app-complete#code=${await createHandoff(prismaHandoffStore, user.id, oauth.challenge)}`
+      : `${origin}${dest}`;
+    const res = NextResponse.redirect(target);
     res.cookies.set('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 12 * 60 * 60 });
     res.cookies.set(GOOGLE_STATE_COOKIE, '', { path: '/api/auth/google', maxAge: 0 });
     return res;
