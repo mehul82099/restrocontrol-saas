@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.restrocontrol.app",
+    "sha256_cert_fingerprints": ["91:18:1D:B6:23:77:7B:93:98:28:B7:F6:97:22:1C:FA:9C:F6:DC:E5:42:2B:92:21:CD:FB:B2:96:D9:50:C6:56"]
+  }
+}]
