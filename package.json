@@ -23,7 +23,8 @@
     "test:attendance": "node tests/attendance-regression.js",
     "test:security-review": "node tests/security-review-regression.js",
     "test:turnstile": "node tests/turnstile-regression.js",
-    "test:auth-human": "node tests/auth-human-flow-regression.js"
+    "test:auth-human": "node tests/auth-human-flow-regression.js",
+    "test:auth-retry": "node tests/auth-budget-retry-regression.js"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

@@ -31,13 +31,40 @@ export async function readBoundedText(req: Request, maximum = 65536): Promise<st
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// Transient connection errors (cold start / connection setup / pool wait), retried a couple
+// of times before the caller fails closed with 503. Any other error is rethrown at once.
+// P1001 can't reach DB, P1002 DB reach timed out, P2024 timed out fetching a pooled
+// connection: the query never ran. P1017 server closed the connection: worst case a retry
+// counts one extra hit against the budget, which only makes throttling stricter.
+const TRANSIENT_DB_CODES = new Set(['P1001', 'P1002', 'P1017', 'P2024']);
+const AUTH_BUDGET_RETRY_DELAYS_MS = [200, 500];
+
+export function isTransientDbError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as {name?: unknown; code?: unknown; errorCode?: unknown};
+  if (e.name === 'PrismaClientInitializationError') return true;
+  const code = typeof e.code === 'string' ? e.code : typeof e.errorCode === 'string' ? e.errorCode : '';
+  return TRANSIENT_DB_CODES.has(code);
+}
+
+export async function withTransientDbRetry<T>(operation: () => Promise<T>, delaysMs: readonly number[] = AUTH_BUDGET_RETRY_DELAYS_MS): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= delaysMs.length || !isTransientDbError(error)) throw error;
+      await new Promise(resolve => setTimeout(resolve, delaysMs[attempt]));
+    }
+  }
+}
+
 export async function consumeAuthBudget(scope: string, identity: string, limit: number, windowMs: number): Promise<boolean> {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32) throw new Error('Security budget key unavailable');
   const key = createHmac('sha256', secret).update('auth-budget-v1\0' + scope + '\0' + identity).digest('hex');
   const now = new Date();
   const expiresAt = new Date(now.getTime() + windowMs);
-  const rows = await prisma.$queryRaw<{hits: number}[]>`
+  const rows = await withTransientDbRetry(() => prisma.$queryRaw<{hits: number}[]>`
     WITH cleanup AS (
       DELETE FROM "SecurityRateLimit" WHERE "key" IN (
         SELECT "key" FROM "SecurityRateLimit" WHERE "expiresAt" < ${new Date(now.getTime() - 86400000)} AND "key" <> ${key} LIMIT 10
@@ -48,7 +75,7 @@ export async function consumeAuthBudget(scope: string, identity: string, limit: 
       "hits" = CASE WHEN "SecurityRateLimit"."expiresAt" <= ${now} THEN 1 ELSE "SecurityRateLimit"."hits" + 1 END,
       "expiresAt" = CASE WHEN "SecurityRateLimit"."expiresAt" <= ${now} THEN ${expiresAt} ELSE "SecurityRateLimit"."expiresAt" END
     WHERE "SecurityRateLimit"."expiresAt" <= ${now} OR "SecurityRateLimit"."hits" < ${limit}
-    RETURNING "hits"`;
+    RETURNING "hits"`);
   return rows.length === 1;
 }
 
