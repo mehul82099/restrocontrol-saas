@@ -1,4 +1,5 @@
 import { type NextRequest, type NextResponse } from 'next/server';
+import { prisma } from '@/server/db/prisma';
 import { requireAdmin } from '@/server/manual-upi/auth';
 import { enforceRenewal } from '@/server/manual-upi/entitlement';
 import { json, jsonBody, respond } from '@/server/manual-upi/http';
@@ -21,7 +22,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     await enforceRenewal(store);
     const pending = await store.listPayments({ statuses: REVIEWABLE_STATUSES, limit: 200 });
     const reviewed = await store.listPayments({ statuses: REVIEWED, limit: 50 });
-    return json({ success: true, pending: pending.map(serialize), reviewed: reviewed.map(serialize) });
+    const names = await restaurantNames([...pending, ...reviewed].map(p => p.restaurantId));
+    return json({ success: true, pending: pending.map(p => serialize(p, names)), reviewed: reviewed.map(p => serialize(p, names)) });
   });
 }
 
@@ -54,10 +56,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
 }
 
-function serialize(p: ManualUpiPayment) {
+// Operator context: the queue must let a human tell restaurants and payments
+// apart without guessing, so each row carries the restaurant's display name.
+async function restaurantNames(ids: string[]): Promise<Record<string, string>> {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return {};
+  const rows = await prisma.restaurant.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
+  return Object.fromEntries(rows.map(r => [r.id, r.name]));
+}
+
+function serialize(p: ManualUpiPayment, names: Record<string, string> = {}) {
   return {
     id: p.id,
     restaurantId: p.restaurantId,
+    restaurantName: names[p.restaurantId] ?? null,
     planCode: p.planCode,
     amountPaise: p.amountPaise,
     status: p.status,
