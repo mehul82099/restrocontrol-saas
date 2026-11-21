@@ -9,6 +9,15 @@ export const MANUAL_UPI_VPA_FLAG = 'MANUAL_UPI_VPA';
 export const MANUAL_UPI_PAYEE_NAME_FLAG = 'MANUAL_UPI_PAYEE_NAME';
 export const MANUAL_UPI_ADMIN_USER_IDS_FLAG = 'MANUAL_UPI_ADMIN_USER_IDS';
 export const MANUAL_UPI_ALLOW_PLACEHOLDER_FLAG = 'MANUAL_UPI_ALLOW_PLACEHOLDER';
+// Paid-subscription lapse enforcement (72h grace + SUBSCRIPTION_LAPSED) is a
+// separate, default-OFF policy switch. The manual-UPI module works without
+// it; enabling it changes access rules for manual-billed restaurants and is
+// an explicit per-environment decision.
+export const MANUAL_UPI_LAPSE_FLAG = 'MANUAL_UPI_LAPSE_ENFORCEMENT';
+
+export function manualUpiLapseEnforcement(): boolean {
+  return process.env[MANUAL_UPI_LAPSE_FLAG] === 'true';
+}
 
 export const PLACEHOLDER_VPA = 'TEST-ONLY-placeholder';
 
