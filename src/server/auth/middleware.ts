@@ -39,14 +39,14 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   // check a lapsed paid subscription would keep full access indefinitely -
   // the manual-UPI flow has no provider webhook to flip status promptly.
   const PAID_LAPSE_GRACE_MS = 72 * 60 * 60 * 1000;
-  // Scoped to manual-UPI restaurants only: existing Razorpay-live subscriptions
-  // keep their pre-change behavior (provider state is their source of truth),
-  // so this module introduces no new enforcement for them unless the owner
-  // explicitly opts into manual billing (a ManualUpiPayment row exists).
+  // Scoped to manual-managed restaurants only: an APPROVED manual-UPI payment
+  // means manual billing actually funded a period here. A Razorpay customer who
+  // merely opens then abandons a manual checkout (PENDING_UTR/REJECTED rows)
+  // keeps exact pre-change behavior - no new enforcement from this module.
   const paidLapsed = !!subscription
     && (subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE')
     && subscription.currentPeriodEnd.getTime() + PAID_LAPSE_GRACE_MS < now.getTime()
-    && !!(await prisma.manualUpiPayment.findFirst({ where: { restaurantId: user.restaurantId }, select: { id: true } }));
+    && !!(await prisma.manualUpiPayment.findFirst({ where: { restaurantId: user.restaurantId, status: 'APPROVED' }, select: { id: true } }));
   if ((getTrialInfo(subscription).expired || paidLapsed) && !isTrialExemptPath(new URL(req.url).pathname, req.method)) {
     return {errorResponse: NextResponse.json(paidLapsed
       ? {success: false, code: 'SUBSCRIPTION_LAPSED', error: 'Your subscription period has ended. Renew to continue.'}
