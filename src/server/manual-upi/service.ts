@@ -69,7 +69,9 @@ export interface CreateOrderResult {
 /**
  * Create a pending payment for a fresh 1-month period starting now.
  * Idempotent per customer intent: if an OPEN order already exists for this
- * restaurant+plan, it is returned (reused) instead of duplicated. Terminal
+ * restaurant+plan and is still inside its UTR TTL, it is returned (reused)
+ * instead of duplicated. A TTL-expired open order is expired at read time
+ * and never reused - checkout returns a fresh order directly. Terminal
  * orders (REJECTED/EXPIRED) never block a fresh checkout - the unique
  * (restaurantId, planCode, periodStart) key only guards same-millisecond
  * races, resolved by the retry below.
@@ -81,7 +83,18 @@ export async function createManualOrder(store: ManualUpiStore, input: CreateOrde
   const { vpa } = vpaConfig();
 
   const open = await store.findOpenOrder(input.restaurantId, plan.code);
-  if (open) return { payment: open, reused: true };
+  if (open) {
+    if (!isExpired(open, now)) return { payment: open, reused: true };
+    // A TTL-expired PENDING_UTR order is never reusable: expire it at read
+    // time, then fall through to create a fresh order. If a concurrent
+    // submit wins the CAS race, re-read once and reuse whatever open order
+    // remains.
+    const expired = await store.transitionPayment(open.id, ['PENDING_UTR'], 'EXPIRED', { reviewedAt: now });
+    if (!expired) {
+      const again = await store.findOpenOrder(input.restaurantId, plan.code);
+      if (again) return { payment: again, reused: true };
+    }
+  }
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const periodStart = new Date(now.getTime() + attempt);
