@@ -60,22 +60,23 @@ async function main() {
 
   // 3a/3b: UTR validation
   await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: '123' }), 400, '3a malformed UTR 400');
-  const s1 = await submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: 'utr000000001' });
-  ok(s1.status === 'UTR_SUBMITTED' && s1.utr === 'UTR000000001', '3b valid UTR normalized uppercase');
+  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: 'MOBILEUTR001' }), 400, '3a2 alphanumeric UTR 400');
+  const s1 = await submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: '  100000000001  ' });
+  ok(s1.status === 'UTR_SUBMITTED' && s1.utr === '100000000001', '3b valid 12-digit UTR accepted, trim-normalized');
 
   // 3c: duplicate UTR across two orders of same restaurant
   const o2 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_MULTI' });
-  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o2.payment.id, utr: 'UTR000000001' }), 409, '3c duplicate UTR same restaurant 409');
+  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o2.payment.id, utr: '100000000001' }), 409, '3c duplicate UTR same restaurant 409');
 
   // 3d: duplicate UTR across restaurants
   const o3 = await createManualOrder(store, { restaurantId: R2, planCode: 'WEBSITE_SINGLE' });
-  await expectErr(() => submitUtr(store, { restaurantId: R2, orderId: o3.payment.id, utr: 'UTR000000001' }), 409, '3d duplicate UTR cross-restaurant 409');
+  await expectErr(() => submitUtr(store, { restaurantId: R2, orderId: o3.payment.id, utr: '100000000001' }), 409, '3d duplicate UTR cross-restaurant 409');
 
   // 3e: submit on non-PENDING payment
-  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: 'UTR000000002' }), 409, '3e resubmit 409');
+  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o1.payment.id, utr: '100000000002' }), 409, '3e resubmit 409');
 
   // 4a: cross-restaurant submit blocked
-  await expectErr(() => submitUtr(store, { restaurantId: R2, orderId: o1.payment.id, utr: 'UTR000000099' }), 403, '4a cross-restaurant submit 403');
+  await expectErr(() => submitUtr(store, { restaurantId: R2, orderId: o1.payment.id, utr: '100000000099' }), 403, '4a cross-restaurant submit 403');
 
   // 5a: approve without bank-credit-confirmed -> 400; reject without note -> 400
   await expectErr(() => approvePayment(store, { paymentId: o1.payment.id, reviewedBy: 'admin', bankCreditConfirmed: false }), 400, '5a approve w/o bank confirm 400');
@@ -95,7 +96,7 @@ async function main() {
 
   // 7: concurrent approve+reject -> exactly one wins
   const o4 = await createManualOrder(store, { restaurantId: R2, planCode: 'WEBSITE_SINGLE' });
-  await submitUtr(store, { restaurantId: R2, orderId: o4.payment.id, utr: 'UTR000000777' });
+  await submitUtr(store, { restaurantId: R2, orderId: o4.payment.id, utr: '100000000777' });
   const [r1, r2] = await Promise.all([
     approvePayment(store, { paymentId: o4.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true }),
     rejectPayment(store, { paymentId: o4.payment.id, reviewedBy: 'admin', reviewNote: 'not found' }),
@@ -111,8 +112,8 @@ async function main() {
   const o5 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_MULTI' });
   const o6 = await createManualOrder(store, { restaurantId: R2, planCode: 'WEBSITE_MULTI' });
   const results = await Promise.allSettled([
-    submitUtr(store, { restaurantId: R1, orderId: o5.payment.id, utr: 'RACEUTRA0011' }),
-    submitUtr(store, { restaurantId: R2, orderId: o6.payment.id, utr: 'RACEUTRA0011' }),
+    submitUtr(store, { restaurantId: R1, orderId: o5.payment.id, utr: '100000000011' }),
+    submitUtr(store, { restaurantId: R2, orderId: o6.payment.id, utr: '100000000011' }),
   ]);
   const okCount = results.filter(r => r.status === 'fulfilled').length;
   const rej = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
@@ -122,7 +123,7 @@ async function main() {
   const past = new Date(Date.now() - 31 * 60 * 1000);
   const o7 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE', now: past });
   await sweepExpiredPayments(store);
-  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o7.payment.id, utr: 'UTR000000888' }), 410, '8a expired submit 410');
+  await expectErr(() => submitUtr(store, { restaurantId: R1, orderId: o7.payment.id, utr: '100000000888' }), 410, '8a expired submit 410');
   await expectErr(() => approvePayment(store, { paymentId: o7.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true }), 410, '8a expired approve 410');
 
   // F3: fresh checkout after terminal (EXPIRED) succeeds
@@ -130,7 +131,7 @@ async function main() {
   ok(!o8.reused && o8.payment.id !== o7.payment.id && o8.payment.status === 'PENDING_UTR', 'F3 fresh checkout after terminal works');
 
   // F3b: fresh checkout after REJECTED succeeds
-  await submitUtr(store, { restaurantId: R1, orderId: o8.payment.id, utr: 'UTR000000999' });
+  await submitUtr(store, { restaurantId: R1, orderId: o8.payment.id, utr: '100000000999' });
   await rejectPayment(store, { paymentId: o8.payment.id, reviewedBy: 'admin', reviewNote: 'UTR not in statement' });
   const o9 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' });
   ok(!o9.reused && o9.payment.status === 'PENDING_UTR', 'F3b fresh checkout after REJECTED works');
@@ -138,7 +139,7 @@ async function main() {
   // 9a: period end without approved payment -> PAST_DUE
   const R3 = 'rest-3';
   const o10 = await createManualOrder(store, { restaurantId: R3, planCode: 'WEBSITE_SINGLE' });
-  await submitUtr(store, { restaurantId: R3, orderId: o10.payment.id, utr: 'UTR000001000' });
+  await submitUtr(store, { restaurantId: R3, orderId: o10.payment.id, utr: '100000001000' });
   await approvePayment(store, { paymentId: o10.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true });
   await enforceRenewal(store, new Date(Date.now() + 40 * 24 * 3600 * 1000));
   const subR3 = await store.getSubscription(R3);
@@ -148,11 +149,11 @@ async function main() {
   // (fresh restaurant, created after the 9a future-sweep so it stays ACTIVE)
   const R4 = 'rest-4';
   const o12 = await createManualOrder(store, { restaurantId: R4, planCode: 'WEBSITE_SINGLE' });
-  await submitUtr(store, { restaurantId: R4, orderId: o12.payment.id, utr: 'UTR000001122' });
+  await submitUtr(store, { restaurantId: R4, orderId: o12.payment.id, utr: '100000001122' });
   await approvePayment(store, { paymentId: o12.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true });
   const before = (await store.getSubscription(R4))!.currentPeriodEnd.getTime();
   const o11 = await createManualOrder(store, { restaurantId: R4, planCode: 'WEBSITE_SINGLE' });
-  await submitUtr(store, { restaurantId: R4, orderId: o11.payment.id, utr: 'UTR000001111' });
+  await submitUtr(store, { restaurantId: R4, orderId: o11.payment.id, utr: '100000001111' });
   await approvePayment(store, { paymentId: o11.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true });
   const after = (await store.getSubscription(R4))!.currentPeriodEnd.getTime();
   const expected = addCalendarMonth(new Date(before)).getTime();
@@ -160,7 +161,7 @@ async function main() {
   // 9c: lapsed (PAST_DUE) renewal reactivates with a FRESH period, no extension
   ok((await store.getSubscription(R1))!.status === 'PAST_DUE', '9c precondition: R1 lapsed');
   const o13 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' });
-  await submitUtr(store, { restaurantId: R1, orderId: o13.payment.id, utr: 'UTR000001333' });
+  await submitUtr(store, { restaurantId: R1, orderId: o13.payment.id, utr: '100000001333' });
   await approvePayment(store, { paymentId: o13.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true });
   const subR1 = await store.getSubscription(R1);
   ok(subR1!.status === 'ACTIVE' && Math.abs(subR1!.currentPeriodEnd.getTime() - o13.payment.periodEnd.getTime()) < 2000, '9c lapsed renewal reactivates fresh 1-month period');
