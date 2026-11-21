@@ -9,6 +9,7 @@ import { formatINR } from '@/lib/gst';
 interface AdminPayment {
   id: string;
   restaurantId: string;
+  restaurantName: string | null;
   planCode: string;
   amountPaise: number;
   status: string;
@@ -119,7 +120,10 @@ export default function ManualPaymentsAdminPage() {
             <article key={p.id} className="rounded-2xl border border-stone-200 bg-white p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-lg font-bold">{p.restaurantId}</p>
+                  <p className="text-lg font-bold">{p.restaurantName ?? p.restaurantId}</p>
+                  <p className="mt-0.5 text-xs text-stone-500">
+                    Order {p.id.slice(0, 8)} · created {new Date(p.createdAt).toLocaleString()}
+                  </p>
                   <p className="mt-1 text-sm text-stone-600">
                     {p.planCode} · {formatINR(p.amountPaise)} · {p.status}
                   </p>
@@ -148,11 +152,15 @@ export default function ManualPaymentsAdminPage() {
                   </label>
                   <button
                     onClick={() => act(p.id, 'approve')}
-                    disabled={busy}
-                    className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:opacity-60"
+                    disabled={busy || !p.utr}
+                    title={p.utr ? undefined : 'Waiting for the customer to submit their UTR'}
+                    className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white disabled:opacity-40"
                   >
                     Approve & activate (1 month)
                   </button>
+                  {!p.utr && (
+                    <p className="mt-2 text-xs text-stone-500">Approval unlocks after the customer submits their 12-digit UTR.</p>
+                  )}
                 </div>
 
                 <div className="rounded-xl border border-stone-200 p-4">
@@ -181,7 +189,7 @@ export default function ManualPaymentsAdminPage() {
           {reviewed.map(p => (
             <article key={p.id} className="rounded-2xl border border-stone-200 bg-white p-4 text-sm">
               <p>
-                <strong>{p.restaurantId}</strong> · {p.planCode} · {formatINR(p.amountPaise)} ·{' '}
+                <strong>{p.restaurantName ?? p.restaurantId}</strong> · Order {p.id.slice(0, 8)} · {p.planCode} · {formatINR(p.amountPaise)} ·{' '}
                 <span className="font-bold">{p.status}</span>
               </p>
               <p className="mt-1 text-stone-500">
