@@ -3,6 +3,7 @@ import { verifyToken, AuthUserPayload } from './jwt';
 import { hasPermission, Permission } from './permissions';
 import { prisma } from '../db/prisma';
 import { getTrialInfo, isTrialExemptPath } from '../services/trial.service';
+import { manualUpiLapseEnforcement } from '@/server/manual-upi/config';
 import { publicOrigin } from '@/server/public-origin';
 
 export interface AuthenticatedContext {
@@ -38,12 +39,15 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   // absorbs provider/renewal lag. CANCELLED is not touched here. Without this
   // check a lapsed paid subscription would keep full access indefinitely -
   // the manual-UPI flow has no provider webhook to flip status promptly.
+  // POLICY GATE: this enforcement is off unless MANUAL_UPI_LAPSE_ENFORCEMENT
+  // is explicitly true for the environment; the module ships with it off.
   const PAID_LAPSE_GRACE_MS = 72 * 60 * 60 * 1000;
   // Scoped to manual-managed restaurants only: an APPROVED manual-UPI payment
   // means manual billing actually funded a period here. A Razorpay customer who
   // merely opens then abandons a manual checkout (PENDING_UTR/REJECTED rows)
   // keeps exact pre-change behavior - no new enforcement from this module.
-  const paidLapsed = !!subscription
+  const paidLapsed = manualUpiLapseEnforcement()
+    && !!subscription
     && (subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE')
     && subscription.currentPeriodEnd.getTime() + PAID_LAPSE_GRACE_MS < now.getTime()
     && !!(await prisma.manualUpiPayment.findFirst({ where: { restaurantId: user.restaurantId, status: 'APPROVED' }, select: { id: true } }));
