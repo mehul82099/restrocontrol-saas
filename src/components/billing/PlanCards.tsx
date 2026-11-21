@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { SUBSCRIPTION_PLANS, planBreakup } from '@/lib/subscription-plans';
 import { GST_RATE_LABEL, formatINR } from '@/lib/gst';
+import ManualUpiCheckout from './ManualUpiCheckout';
 
 export default function PlanCards({ canRequest = false, currentCode, account = false }: { canRequest?: boolean; currentCode?: string; account?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [live, setLive] = useState<boolean | null>(null);
+  const [manual, setManual] = useState<boolean | null>(null);
   useEffect(() => { fetch('/api/billing/live/status').then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => setLive(!ok || d?.success !== true ? null : d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setLive(null)); }, []);
+  useEffect(() => { fetch('/api/billing/manual/status').then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => setManual(!ok || d?.success !== true ? null : d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setManual(null)); }, []);
   async function pay(planCode: string) {
     const plan = SUBSCRIPTION_PLANS.find(p => p.code === planCode); if (!plan) return;
     if (!confirm('You will pay ' + formatINR(planBreakup(plan).totalPaise) + ' now (including 18% GST) and then every month automatically until you cancel. Continue?')) return;
@@ -51,6 +54,7 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
           : canRequest ? <button onClick={() => request(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Saving request...' : currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI' ? 'Request upgrade to ₹699 + GST' : 'Request this plan'}</button>
           : account ? <button disabled className="mt-5 w-full rounded-xl bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500">Only the owner can request a plan</button>
           : <Link href="/signup" className="mt-5 rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white">Start 14-day free trial</Link>}
+        {canRequest && manual === true && !plan.upcoming && currentCode !== plan.code ? <ManualUpiCheckout planCode={plan.code} /> : null}
       </section>)}
     </div>
     {message && <p role="status" className="mt-5 rounded-xl border border-stone-200 bg-white p-4 text-sm leading-6 text-stone-700">{message}</p>}
