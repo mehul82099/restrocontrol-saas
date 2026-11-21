@@ -8,6 +8,7 @@ export const MANUAL_UPI_ENABLED_FLAG = 'MANUAL_UPI_ENABLED';
 export const MANUAL_UPI_VPA_FLAG = 'MANUAL_UPI_VPA';
 export const MANUAL_UPI_PAYEE_NAME_FLAG = 'MANUAL_UPI_PAYEE_NAME';
 export const MANUAL_UPI_ADMIN_USER_IDS_FLAG = 'MANUAL_UPI_ADMIN_USER_IDS';
+export const MANUAL_UPI_ALLOW_PLACEHOLDER_FLAG = 'MANUAL_UPI_ALLOW_PLACEHOLDER';
 
 export const PLACEHOLDER_VPA = 'TEST-ONLY-placeholder';
 
@@ -22,14 +23,15 @@ export function isPlaceholderVpa(vpa: string): boolean {
 /**
  * Resolve the active VPA / payee config.
  * - Flag off -> 404 (checkout is hidden/unavailable).
- * - Production + placeholder VPA -> refuse to run (a real VPA is required).
- * - Otherwise return the preview config (placeholder allowed in TEST PREVIEW).
+ * - Placeholder VPA -> refuse unless MANUAL_UPI_ALLOW_PLACEHOLDER=true, an
+ *   explicit, visible choice for non-payable preview environments. Production
+ *   never sets that flag, so a missing real VPA stays fail-closed there.
  */
 export function vpaConfig(): { vpa: string; payeeName: string } {
   if (!manualUpiEnabled()) throw new ApiError(404, 'Manual UPI payment is disabled.');
   const vpa = (process.env[MANUAL_UPI_VPA_FLAG] || PLACEHOLDER_VPA).trim();
-  if (isPlaceholderVpa(vpa) && process.env.NODE_ENV === 'production') {
-    throw new ApiError(503, 'Manual UPI is not configured for production (a real VPA is required via MANUAL_UPI_VPA).');
+  if (isPlaceholderVpa(vpa) && process.env[MANUAL_UPI_ALLOW_PLACEHOLDER_FLAG] !== 'true') {
+    throw new ApiError(503, 'Manual UPI is not configured (set MANUAL_UPI_VPA to a real VPA, or MANUAL_UPI_ALLOW_PLACEHOLDER=true for a clearly-labeled non-payable preview).');
   }
   const payeeName = (process.env[MANUAL_UPI_PAYEE_NAME_FLAG] || 'RestroControl').trim();
   return { vpa, payeeName };
