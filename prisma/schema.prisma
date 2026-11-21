@@ -973,3 +973,36 @@ model AuthSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, restaurantId, expiresAt])
 }
+
+enum ManualUpiPaymentStatus {
+  PENDING_UTR
+  UTR_SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+/// Native manual-UPI payments (additive module, flag-gated by MANUAL_UPI_ENABLED).
+/// Plain `restaurantId` (indexed, no FK) keeps the table fully additive.
+/// Concurrency is handled at the application layer with conditional updates.
+model ManualUpiPayment {
+  id             String                 @id @default(uuid())
+  restaurantId   String
+  planCode       String
+  amountPaise    Int // integer minor units, GST-inclusive (per planBreakup)
+  status         ManualUpiPaymentStatus @default(PENDING_UTR)
+  utr            String?                @unique // 12-digit UTR; unique across payments
+  vpaSnapshot    String // VPA shown at checkout time (snapshot from env)
+  periodStart    DateTime // the 1-month period this payment buys
+  periodEnd      DateTime
+  createdAt      DateTime               @default(now())
+  utrSubmittedAt DateTime?
+  reviewedAt     DateTime?
+  reviewedBy     String?
+  reviewNote     String?
+  entitlementAppliedAt DateTime? // set once, atomically claimed, before subscription activation (idempotency marker)
+
+  @@unique([restaurantId, planCode, periodStart]) // retries cannot double-create
+  @@index([restaurantId])
+  @@index([status, createdAt])
+}

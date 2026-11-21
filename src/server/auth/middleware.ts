@@ -3,6 +3,7 @@ import { verifyToken, AuthUserPayload } from './jwt';
 import { hasPermission, Permission } from './permissions';
 import { prisma } from '../db/prisma';
 import { getTrialInfo, isTrialExemptPath } from '../services/trial.service';
+import { manualUpiLapseEnforcement } from '@/server/manual-upi/config';
 import { publicOrigin } from '@/server/public-origin';
 
 export interface AuthenticatedContext {
@@ -33,8 +34,27 @@ export async function authenticateRequest(req: NextRequest, requiredPermission?:
   if ((user.role !== 'OWNER' || payload.attendanceSessionId) && !('attendanceSessions' in user && Array.isArray(user.attendanceSessions) && user.attendanceSessions.length)) return reject(401, 'This login session has ended.');
   // Free-trial expiry: only TRIALING subscriptions are blocked. Other accounts are unaffected.
   const subscription = await prisma.subscription.findUnique({where: {restaurantId: user.restaurantId}, select: {status: true, currentPeriodEnd: true}});
-  if (getTrialInfo(subscription).expired && !isTrialExemptPath(new URL(req.url).pathname, req.method)) {
-    return {errorResponse: NextResponse.json({success: false, code: 'TRIAL_EXPIRED', error: 'Your 14-day free trial has ended.'}, {status: 402})};
+  // Paid-subscription lapse (manual-UPI/Razorpay): an ACTIVE or PAST_DUE
+  // subscription past its period end loses access after a 72h grace that
+  // absorbs provider/renewal lag. CANCELLED is not touched here. Without this
+  // check a lapsed paid subscription would keep full access indefinitely -
+  // the manual-UPI flow has no provider webhook to flip status promptly.
+  // POLICY GATE: this enforcement is off unless MANUAL_UPI_LAPSE_ENFORCEMENT
+  // is explicitly true for the environment; the module ships with it off.
+  const PAID_LAPSE_GRACE_MS = 72 * 60 * 60 * 1000;
+  // Scoped to manual-managed restaurants only: an APPROVED manual-UPI payment
+  // means manual billing actually funded a period here. A Razorpay customer who
+  // merely opens then abandons a manual checkout (PENDING_UTR/REJECTED rows)
+  // keeps exact pre-change behavior - no new enforcement from this module.
+  const paidLapsed = manualUpiLapseEnforcement()
+    && !!subscription
+    && (subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE')
+    && subscription.currentPeriodEnd.getTime() + PAID_LAPSE_GRACE_MS < now.getTime()
+    && !!(await prisma.manualUpiPayment.findFirst({ where: { restaurantId: user.restaurantId, status: 'APPROVED' }, select: { id: true } }));
+  if ((getTrialInfo(subscription).expired || paidLapsed) && !isTrialExemptPath(new URL(req.url).pathname, req.method)) {
+    return {errorResponse: NextResponse.json(paidLapsed
+      ? {success: false, code: 'SUBSCRIPTION_LAPSED', error: 'Your subscription period has ended. Renew to continue.'}
+      : {success: false, code: 'TRIAL_EXPIRED', error: 'Your 14-day free trial has ended.'}, {status: 402})};
   }
   if (requiredPermission && !hasPermission(user.role, requiredPermission)) return reject(403, 'Permission denied.');
   const canUseAllOutlets = user.role === 'OWNER';

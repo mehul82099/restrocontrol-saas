@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { SUBSCRIPTION_PLANS, planBreakup } from '@/lib/subscription-plans';
 import { GST_RATE_LABEL, formatINR } from '@/lib/gst';
+import ManualUpiCheckout from './ManualUpiCheckout';
 
 export default function PlanCards({ canRequest = false, currentCode, account = false }: { canRequest?: boolean; currentCode?: string; account?: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [live, setLive] = useState<boolean | null>(null);
+  const [manual, setManual] = useState<boolean | null>(null);
   useEffect(() => { fetch('/api/billing/live/status').then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => setLive(!ok || d?.success !== true ? null : d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setLive(null)); }, []);
+  useEffect(() => { fetch('/api/billing/manual/status').then(async r => ({ ok: r.ok, d: await r.json() })).then(({ ok, d }) => setManual(!ok || d?.success !== true ? null : d?.enabled === true ? true : d?.enabled === false ? false : null)).catch(() => setManual(null)); }, []);
   async function pay(planCode: string) {
     const plan = SUBSCRIPTION_PLANS.find(p => p.code === planCode); if (!plan) return;
     if (!confirm('You will pay ' + formatINR(planBreakup(plan).totalPaise) + ' now (including 18% GST) and then every month automatically until you cancel. Continue?')) return;
@@ -33,7 +36,7 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
     finally { setBusy(null); }
   }
   return <div className="mt-7">
-    <div className="mb-5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-700">Prices are per month and carry 18% GST on top; each card shows the GST-inclusive monthly total. Both website plans include unlimited staff and orders. {live === true ? 'Pay online with UPI or card; renewal is automatic every month (autopay through Razorpay) until you cancel. ' : live === false ? 'Online autopay is not connected yet; activation is handled after signup. ' : ''}Upcoming plans cannot be selected.</div>
+    <div className="mb-5 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-700">Prices are per month and carry 18% GST on top; each card shows the GST-inclusive monthly total. Both website plans include unlimited staff and orders. {manual === true ? 'Pay by UPI; every payment is verified manually before activation, and each month is renewed with a fresh manual payment. ' : live === true ? 'Pay online with UPI or card; renewal is automatic every month (autopay through Razorpay) until you cancel. ' : live === false ? 'Online autopay is not connected yet; activation is handled after signup. ' : ''}Upcoming plans cannot be selected.</div>
     <div className="grid gap-4 sm:grid-cols-2">
       {SUBSCRIPTION_PLANS.map(plan => <section key={plan.code} className={`flex min-w-0 flex-col rounded-2xl border bg-white p-5 ${plan.upcoming ? 'border-stone-200' : 'border-emerald-300'}`}>
         <span className={`self-start rounded-full px-2.5 py-1 text-xs font-bold ${plan.upcoming ? 'bg-stone-100 text-stone-600' : 'bg-emerald-50 text-emerald-800'}`}>{plan.upcoming ? 'Upcoming' : 'Website plan'}</span>
@@ -47,10 +50,12 @@ export default function PlanCards({ canRequest = false, currentCode, account = f
         <p className="mt-4 flex-1 text-sm leading-6 text-stone-600">{plan.description}</p>
         {plan.upcoming ? <button disabled className="mt-5 w-full rounded-xl bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500">Upcoming - not active</button>
           : currentCode === plan.code ? <button disabled className="mt-5 w-full rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">Current plan</button>
-          : canRequest && live && !(currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI') ? <button onClick={() => pay(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Opening checkout...' : 'Pay ' + formatINR(planBreakup(plan).totalPaise) + ' and start autopay'}</button>
-          : canRequest ? <button onClick={() => request(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Saving request...' : currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI' ? 'Request upgrade to ₹699 + GST' : 'Request this plan'}</button>
+          : canRequest && live && manual !== true && !(currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI') ? <button onClick={() => pay(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Opening checkout...' : 'Pay ' + formatINR(planBreakup(plan).totalPaise) + ' and start autopay'}</button>
+          : canRequest && manual !== true ? <button onClick={() => request(plan.code)} disabled={busy !== null} className="mt-5 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{busy === plan.code ? 'Saving request...' : currentCode === 'WEBSITE_SINGLE' && plan.code === 'WEBSITE_MULTI' ? 'Request upgrade to ₹699 + GST' : 'Request this plan'}</button>
+          : canRequest ? null
           : account ? <button disabled className="mt-5 w-full rounded-xl bg-stone-100 px-4 py-3 text-sm font-bold text-stone-500">Only the owner can request a plan</button>
           : <Link href="/signup" className="mt-5 rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white">Start 14-day free trial</Link>}
+        {canRequest && manual === true && !plan.upcoming && currentCode !== plan.code ? <ManualUpiCheckout planCode={plan.code} /> : null}
       </section>)}
     </div>
     {message && <p role="status" className="mt-5 rounded-xl border border-stone-200 bg-white p-4 text-sm leading-6 text-stone-700">{message}</p>}

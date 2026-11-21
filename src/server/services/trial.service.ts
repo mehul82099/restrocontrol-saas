@@ -28,6 +28,7 @@ export function trialEndDate(from = new Date()): Date {
 export function isTrialExemptPath(pathname: string, method: string): boolean {
   if (pathname.startsWith('/api/billing/test/')) return true;
   if (pathname.startsWith('/api/billing/live/')) return true; // expired-trial owners must be able to pay
+  if (pathname.startsWith('/api/billing/manual/')) return true; // expired-trial owners must be able to pay
   if (pathname === '/api/refunds' || pathname === '/api/refunds/admin') return true;
   if (pathname === '/api/auth/me' || pathname === '/api/auth/logout') return true;
   if (pathname === '/api/plans/request' && method === 'POST') return true;
