@@ -165,6 +165,13 @@ async function main() {
   const subR1 = await store.getSubscription(R1);
   ok(subR1!.status === 'ACTIVE' && Math.abs(subR1!.currentPeriodEnd.getTime() - o13.payment.periodEnd.getTime()) < 2000, '9c lapsed renewal reactivates fresh 1-month period');
 
+  // 10: approve from PENDING_UTR (no UTR on file) -> 409, no activation
+  const R5 = 'rest-5';
+  const o14 = await createManualOrder(store, { restaurantId: R5, planCode: 'WEBSITE_SINGLE' });
+  await expectErr(() => approvePayment(store, { paymentId: o14.payment.id, reviewedBy: 'admin', bankCreditConfirmed: true }), 409, '10 approve without UTR refused (409)');
+  ok((await store.findPayment(o14.payment.id))!.status === 'PENDING_UTR', '10 payment still PENDING_UTR');
+  ok((await store.getSubscription(R5)) === null || (await store.getSubscription(R5))!.status !== 'ACTIVE', '10 no entitlement created');
+
   console.log(`\n==== ${pass} passed, ${fail} failed ====`);
   process.exit(fail ? 1 : 0);
 }
