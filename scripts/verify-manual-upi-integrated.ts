@@ -130,6 +130,18 @@ async function main() {
   const o8 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' });
   ok(!o8.reused && o8.payment.id !== o7.payment.id && o8.payment.status === 'PENDING_UTR', 'F3 fresh checkout after terminal works');
 
+  // 8b: TTL-expired open order is never reused - checkout expires it at read
+  // time and returns a fresh order directly (no sweep, no failed submit).
+  const R6 = 'rest-6';
+  const past2 = new Date(Date.now() - 31 * 60 * 1000);
+  const o15 = await createManualOrder(store, { restaurantId: R6, planCode: 'WEBSITE_SINGLE', now: past2 });
+  const o16 = await createManualOrder(store, { restaurantId: R6, planCode: 'WEBSITE_SINGLE' });
+  ok(!o16.reused && o16.payment.id !== o15.payment.id && o16.payment.status === 'PENDING_UTR', '8b expired pending checkout returns fresh directly');
+  ok((await store.findPayment(o15.payment.id))!.status === 'EXPIRED', '8b stale order expired at read time');
+  // 8c: within-TTL second checkout still reuses the open order
+  const o17 = await createManualOrder(store, { restaurantId: R6, planCode: 'WEBSITE_SINGLE' });
+  ok(o17.reused && o17.payment.id === o16.payment.id, '8c within-TTL checkout reuses open order');
+
   // F3b: fresh checkout after REJECTED succeeds
   await submitUtr(store, { restaurantId: R1, orderId: o8.payment.id, utr: '100000000999' });
   await rejectPayment(store, { paymentId: o8.payment.id, reviewedBy: 'admin', reviewNote: 'UTR not in statement' });
