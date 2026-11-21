@@ -7,7 +7,8 @@
       "fix/security-review-nov5": false,
       "fix/new-domain-qa-nov5": false,
       "fix/auth-human-check-nov5": false,
-      "manual-upi-preview": false
+      "manual-upi-preview": false,
+      "main": false
     }
   }
 }
