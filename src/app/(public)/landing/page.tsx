@@ -136,18 +136,18 @@ export default function LandingPage() {
       <main id="main-content">
         {/* Hero */}
         <section className="mx-auto max-w-3xl px-6 pt-16 pb-12 sm:pt-24 text-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[3px] text-[#c0392b]">Restaurant POS + Inventory</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[3px] text-[#c0392b]">Your restaurant, under control.</p>
           <h1 className="font-display mt-4 font-medium leading-[1.02] tracking-tight text-[clamp(2.5rem,7vw,4.5rem)]">
-            Your restaurant,<br className="hidden sm:block" /> <span className="italic text-[#c0392b]">under control.</span>
+            Billing, kitchen display aur stock control -<br className="hidden sm:block" /> <span className="italic text-[#c0392b]">ek browser app mein.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-[420px] text-[15px] leading-relaxed text-[#7a5138]">
-            Know what you sold, what it should have used, what it actually used, and where the gap is.
+            Small cafes aur QSRs ke liye. Owner, manager, cashier, kitchen aur inventory - har staff ka apna login.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Cta href="/signup">Start 14-day free trial</Cta>
             <Cta href="/login" primary={false}>Sign in</Cta>
           </div>
-          <p className="mt-3.5 text-xs text-[#7a5138]">No card needed. Made for small cafes and QSRs.</p>
+          <p className="mt-3.5 text-xs text-[#7a5138]">No card needed · Plans from Rs 499 + GST/month · 80% refund within 7 days of a payment (feedback form required, latest payment only)</p>
         </section>
 
         {/* Quick facts */}
