@@ -991,7 +991,7 @@ model ManualUpiPayment {
   planCode       String
   amountPaise    Int // integer minor units, GST-inclusive (per planBreakup)
   status         ManualUpiPaymentStatus @default(PENDING_UTR)
-  utr            String?                @unique // 12-char UTR; unique across payments
+  utr            String?                @unique // 12-digit UTR; unique across payments
   vpaSnapshot    String // VPA shown at checkout time (snapshot from env)
   periodStart    DateTime // the 1-month period this payment buys
   periodEnd      DateTime
