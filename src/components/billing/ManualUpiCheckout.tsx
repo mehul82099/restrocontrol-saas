@@ -52,8 +52,8 @@ export default function ManualUpiCheckout({ planCode, triggerLabel }: { planCode
 
   const submitUtr = useCallback(async () => {
     if (!checkout) return;
-    if (!/^[A-Za-z0-9]{12}$/.test(utr.trim())) {
-      setError('UTR must be exactly 12 alphanumeric characters.');
+    if (!/^\d{12}$/.test(utr.trim())) {
+      setError('UTR must be exactly 12 digits.');
       return;
     }
     setBusy(true);
@@ -164,11 +164,12 @@ export default function ManualUpiCheckout({ planCode, triggerLabel }: { planCode
                   <li>Enter it below and submit.</li>
                 </ol>
                 <label className="block text-sm font-semibold text-stone-700">
-                  UTR (12 characters)
+                  UTR (12 digits)
                   <input
                     value={utr}
-                    onChange={e => setUtr(e.target.value.replace(/[^0-9A-Za-z]/g, '').slice(0, 12))}
+                    onChange={e => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
                     placeholder="e.g. 410291738821"
+                    inputMode="numeric"
                     className="mt-1 w-full rounded-xl border border-stone-300 px-4 py-2 text-base tracking-widest focus:border-emerald-600 focus:outline-none"
                   />
                 </label>
