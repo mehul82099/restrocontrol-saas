@@ -6,7 +6,7 @@ import { getStore } from '@/server/manual-upi/store';
 
 export const dynamic = 'force-dynamic';
 
-// Owner (manage:subscription). Validates exactly 12-char UTR, enforces the
+// Owner (manage:subscription). Validates exactly 12-digit UTR, enforces the
 // 30-min PENDING_UTR TTL and UTR uniqueness across payments (atomically via
 // the DB unique index), then moves the order to UTR_SUBMITTED.
 export async function POST(req: NextRequest): Promise<NextResponse> {
