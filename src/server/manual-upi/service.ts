@@ -174,6 +174,10 @@ export async function approvePayment(store: ManualUpiStore, input: ApproveInput)
   }
   const payment = await lockedDecision(store, input.paymentId);
   if (payment.status === 'EXPIRED') throw new ApiError(410, 'Order expired; cannot approve.');
+  // Approval requires the customer's UTR on file: without it there is no bank
+  // reference to verify the credit against. PENDING_UTR rows can only be
+  // rejected (or left to expire), never activated.
+  if (payment.status === 'PENDING_UTR') throw new ApiError(409, 'No UTR submitted yet. Verify the bank credit only after the customer submits their 12-digit UTR.');
   if (TERMINAL_STATUSES.has(payment.status)) {
     // Idempotent no-op. If this payment is APPROVED but its entitlement was
     // never applied (an earlier activation failed after the status flip),
@@ -184,7 +188,7 @@ export async function approvePayment(store: ManualUpiStore, input: ApproveInput)
     }
     return { payment, decision: payment.status, already: true, activated: payment.status === 'APPROVED' };
   }
-  const updated = await store.transitionPayment(input.paymentId, REVIEWABLE_STATUSES, 'APPROVED', {
+  const updated = await store.transitionPayment(input.paymentId, ['UTR_SUBMITTED'], 'APPROVED', {
     reviewedAt: now,
     reviewedBy: input.reviewedBy,
     reviewNote: null,
