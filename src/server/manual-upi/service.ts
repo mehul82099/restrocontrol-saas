@@ -8,12 +8,16 @@ import type { ManualUpiStore } from './store';
 // that parse the request, call these, and render JSON. Every function accepts
 // an injectable `now` so time-travel scenarios are testable.
 
-const UTR_PATTERN = /^[A-Za-z0-9]{12}$/;
+// UPI bank references (UTR/RRN) are exactly 12 digits.
+const UTR_PATTERN = /^\d{12}$/;
 
 export function normalizeUtr(raw: unknown): string {
-  if (typeof raw !== 'string') throw new ApiError(400, 'UTR must be a 12-character string.');
-  const utr = raw.trim().toUpperCase();
-  if (!UTR_PATTERN.test(utr)) throw new ApiError(400, 'UTR must be exactly 12 alphanumeric characters.');
+  if (typeof raw !== 'string') throw new ApiError(400, 'UTR must be a 12-digit string.');
+  // Trim is the only normalization. The same normalized value feeds both the
+  // duplicate check and the write, so findPaymentByUtr and the DB unique
+  // index always agree.
+  const utr = raw.trim();
+  if (!UTR_PATTERN.test(utr)) throw new ApiError(400, 'UTR must be exactly 12 digits.');
   return utr;
 }
 
