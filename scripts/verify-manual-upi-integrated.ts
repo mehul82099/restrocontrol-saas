@@ -6,6 +6,7 @@
 process.env.MANUAL_UPI_STORE = 'memory';
 process.env.MANUAL_UPI_ENABLED = 'true';
 process.env.MANUAL_UPI_VPA = 'TEST-ONLY-placeholder';
+process.env.MANUAL_UPI_ALLOW_PLACEHOLDER = 'true';
 (process.env as Record<string, string>).NODE_ENV = 'test';
 
 import { InMemoryStore } from '../src/server/manual-upi/store';
@@ -35,10 +36,10 @@ async function main() {
   await expectErr(() => createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' }), 404, '0b flag off -> 404');
   process.env.MANUAL_UPI_ENABLED = 'true';
 
-  // 0c: placeholder VPA refused in production
-  (process.env as Record<string, string>).NODE_ENV = 'production';
-  await expectErr(() => createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' }), 503, '0c placeholder VPA refused in prod (503)');
-  (process.env as Record<string, string>).NODE_ENV = 'test';
+  // 0c: placeholder VPA refused without the explicit preview allowance
+  delete process.env.MANUAL_UPI_ALLOW_PLACEHOLDER;
+  await expectErr(() => createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' }), 503, '0c placeholder VPA refused without allowance (503)');
+  process.env.MANUAL_UPI_ALLOW_PLACEHOLDER = 'true';
 
   // 1a: checkout creates PENDING_UTR, ~1 month period
   const o1 = await createManualOrder(store, { restaurantId: R1, planCode: 'WEBSITE_SINGLE' });
